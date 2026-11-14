@@ -1,0 +1,1291 @@
+<!doctype html>
+<!--
+  PAGE: Dashboard (dashboard.html)
+  FOR: Administrator.
+  PURPOSE: Friday, Nov 6, 2026 · Today’s sales, stock, purchasing and alerts at a glance.
+  SECTIONS: Daily and Monthly Sales Trend · Sales calendar · Best-Selling and Slow-Moving Dishes · Current Ingredient Inventory Status · Suggested Purchase Quantities · Pending Purchase Orders · Near-Expiry and Wastage · Purchase History and Spending Summary.
+  SCRIPTS: shell, session, dialogs, charts (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+-->
+<html lang="en" class="h-full" data-page-roles="admin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Ace Bistro SCM</title>
+  <meta name="description" content="Ace Bistro Supply Chain Management System.">
+  <meta name="theme-color" content="#15803D">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
+       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
+       The backend replaces it with a server-side check. -->
+  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
+  if(!u||!u.role){location.replace('login.html');return}
+  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
+  d.setAttribute('data-role',u.role)})()</script>
+
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <noscript><style>html body { visibility: visible !important; }</style></noscript>
+</head>
+<body class="h-full bg-page font-sans text-slate-800 antialiased">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div id="app" class="min-h-full lg:flex">
+    <!-- Mobile drawer overlay -->
+    <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
+
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+          <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="leading-tight">
+            <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
+            <span class="cell-xs">Supply Chain Management</span>
+          </span>
+        </a>
+        <button type="button" data-drawer-close class="btn btn-ghost btn-sm ml-auto !px-2 lg:hidden" aria-label="Close menu"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav aria-label="Main" class="scroll-thin flex-1 overflow-y-auto p-3">
+        <ul class="space-y-1">
+          <li data-roles="admin"><a href="dashboard.html" aria-current="page" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+          <li data-roles="admin cashier"><a href="orders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg><span>Order Records</span></a></li>
+          <li data-roles="admin cashier kitchen"><a href="menu.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span>Menu &amp; Recipes</span></a></li>
+          <li data-roles="admin kitchen inventory procurement"><a href="inventory.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Inventory</span></a></li>
+          <li data-roles="admin procurement"><a href="suppliers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg><span>Suppliers</span></a></li>
+          <li data-roles="admin procurement"><a href="procurement.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Procurement</span></a></li>
+          <li data-roles="inventory"><a href="receiving.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Receiving</span></a></li>
+          <li data-roles="admin procurement"><a href="demand.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>Demand Estimation</span></a></li>
+          <li data-roles="admin inventory procurement"><a href="reports.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Reports</span></a></li>
+          <li data-roles="admin"><a href="user-accounts.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>User Management</span></a></li>
+          <li data-roles="admin"><a href="settings.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- END SHARED: sidebar -->
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
+      <header id="topbar" class="no-print app-topbar">
+        <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+          <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="hidden strong-sm xs:inline">Ace Bistro</span>
+        </a>
+        <div class="ml-auto flex items-center gap-1 sm:gap-2">
+          <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+          <div class="relative" data-roles="admin kitchen inventory procurement">
+            <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="hidden sm:inline">Alerts</span>
+              <span data-roles="admin inventory procurement" class="alert-count" aria-label="13 alerts">13</span>
+              <span data-roles="kitchen" class="alert-count" aria-label="9 alerts">9</span>
+            </button>
+            <div id="alerts-panel" class="popover hidden absolute right-0 top-full z-30 mt-2 w-[min(92vw,380px)]" role="region" aria-label="Alerts">
+              <div class="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+                <p class="px-4 py-3 strong-sm">Needs attention</p>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Low stock <span class="badge badge-amber">5</span></h3>
+                  <a href="inventory.html?status=below" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=out" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Shrimp</span><span class="note-block">Out of stock</span></span>
+                    <span class="badge badge-out shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Out</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Tomato</span><span class="note-block">0.6 kg left · reorder at 2</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Eggs</span><span class="note-block">2.5 tray (30 pcs) left · reorder at 7</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 2 more</p>
+              </div>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Near expiry <span class="badge badge-amber">4</span></h3>
+                  <a href="inventory.html?status=near" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Bangus (milkfish)</span><span class="note-block">3.7 kg · expires tomorrow</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Ground beef</span><span class="note-block">9.9 kg · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Fresh milk</span><span class="note-block">5.1 L · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="admin procurement">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending purchase orders <span class="badge badge-blue">4</span></h3>
+                  <a href="purchase-orders.html?status=pending" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="purchase-orders.html?status=draft" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="inventory">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending deliveries <span class="badge badge-blue">4</span></h3>
+                  <a href="receiving.html" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <div class="relative">
+            <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+              <span class="sr-only">Account menu</span>
+              <span class="user-chip" data-user-chip>
+                <span class="avatar" aria-hidden="true" data-user-initials></span>
+                <span class="hidden text-left leading-tight sm:block">
+                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
+                  <span class="cell-xs" data-user-role></span>
+                </span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
+              <div class="border-b border-slate-100 px-4 py-3">
+                <p class="strong-sm" data-user-name></p>
+                <p class="text-[13px] text-slate-600" data-user-role></p>
+              </div>
+              <ul class="p-1">
+                <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
+                <li><button type="button" data-dialog-open="logout-dialog" class="menu-item w-full text-left"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Log out</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+      <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
+        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+        <div class="modal-foot">
+          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+          <button type="button" data-logout class="btn btn-primary">Log out</button>
+        </div>
+      </dialog>
+      <!-- END SHARED: topbar -->
+
+      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
+      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
+        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
+        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
+        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      </div>
+      <!-- END SHARED: flash -->
+
+      <main id="main" tabindex="-1" class="min-w-0 flex-1 outline-none">
+        <div class="page-wrap">
+          <div>
+            <div>
+              <h1 class="page-title">Dashboard</h1>
+              <p class="page-lead">Friday, Nov 6, 2026 · Today’s sales, stock, purchasing and alerts at a glance.</p>
+            </div>
+            <!-- SUMMARY RULES: Today's Sales = SUM(order.total) of today's completed orders (Order Records, Nov 6: 68 orders); Yesterday = the same for Nov 5 (Sales calendar). Low-Stock = ingredients with usable stock at or below the reorder level (Inventory, "Below reorder level"); out of stock = usable stock 0.
+    Pending Purchase Orders = purchase_order with status draft, sent or partial (Purchase Orders page); total = SUM of their line totals; next delivery = earliest expected date; overdue = expected date before today. Near-Expiry = batches expiring within the near-expiry window (Inventory). Each card links to the page that lists its rows. -->
+            <div class="mt-6 grid grid-cols-1 gap-3 xs:grid-cols-2 md:gap-4 xl:grid-cols-4">
+              <a href="reports.html" class="card block min-w-0 p-4 transition-shadow hover:shadow-md md:p-5">
+                <div class="row-between gap-2">
+                  <p class="text-sm font-medium text-slate-700">Today's Sales</p>
+                  <span class="text-slate-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+                  </span>
+                </div>
+                <p class="kpi-value mt-2">₱10,085</p>
+                <div class="kpi-sub mt-3">
+                  <span class="w-full text-slate-700">68 orders</span>
+                  <span class="w-full text-slate-600">Yesterday ₱20,840</span>
+                </div>
+              </a>
+              <a href="inventory.html" class="card block min-w-0 p-4 transition-shadow hover:shadow-md md:p-5">
+                <div class="row-between gap-2">
+                  <p class="text-sm font-medium text-slate-700">Low-Stock Ingredients</p>
+                  <span class="text-slate-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                  </span>
+                </div>
+                <p class="kpi-value mt-2">5</p>
+                <div class="kpi-sub mt-3">
+                  <span class="badge badge-out">
+                    <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                    1 out of stock
+                  </span>
+                  <span class="badge badge-amber">
+                    <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    4 below reorder level
+                  </span>
+                </div>
+              </a>
+              <a href="purchase-orders.html" class="card block min-w-0 p-4 transition-shadow hover:shadow-md md:p-5">
+                <div class="row-between gap-2">
+                  <p class="text-sm font-medium text-slate-700">Pending Purchase Orders</p>
+                  <span class="text-slate-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                  </span>
+                </div>
+                <p class="kpi-value mt-2">4</p>
+                <div class="kpi-sub mt-3">
+                  <span class="w-full text-slate-700">₱20,028 total · next delivery Nov 7</span>
+                  <span class="badge badge-blue">
+                    <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    2 sent · 1 draft · 1 partial
+                  </span>
+                  <span class="badge badge-amber">
+                    <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    1 overdue
+                  </span>
+                </div>
+              </a>
+              <a href="inventory.html" class="card block min-w-0 p-4 transition-shadow hover:shadow-md md:p-5">
+                <div class="row-between gap-2">
+                  <p class="text-sm font-medium text-slate-700">Near-Expiry Items</p>
+                  <span class="text-slate-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </span>
+                </div>
+                <p class="kpi-value mt-2">4</p>
+                <div class="kpi-sub mt-3">
+                  <span class="badge badge-amber">
+                    <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    ₱5,040 at risk
+                  </span>
+                  <span class="w-full text-slate-700">Earliest: Bangus (milkfish) tomorrow</span>
+                </div>
+              </a>
+            </div>
+            <div class="mt-4 grid items-start gap-4 md:mt-6 md:gap-6 xl:grid-cols-12">
+              <div class="min-w-0 xl:col-span-8">
+                <!-- Section: Daily and Monthly Sales Trend -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="trend-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="trend-title" class="card-title">Daily and Monthly Sales Trend</h2>
+                    </div>
+                    <div class="shrink-0">
+                      <div class="seg" role="group" aria-label="Sales trend period">
+                        <button type="button" aria-pressed="true" data-tab-group="trend" data-tab-target="trend-daily">Daily</button>
+                        <button type="button" aria-pressed="false" data-tab-group="trend" data-tab-target="trend-monthly">Monthly</button>
+                      </div>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body">
+                    <div id="trend-daily" data-tab-panel="trend">
+                      <p class="text-sm text-slate-700">30 complete days: ₱564,750 · average ₱18,825 per day · today ₱10,085 (68 orders)</p>
+                      <!-- CHART DATA — Daily sales (₱) — last 30 complete days, then today Oct 7 · ₱20,320 · 137 orders Oct 8 · ₱19,895 · 136 orders Oct 9 · ₱22,705 · 145 orders Oct 10 · ₱14,115 · 97 orders Oct 11 · ₱14,505 · 90 orders Oct 12 · ₱20,160 · 128 orders Oct 13 · ₱20,465 · 134 orders Oct 14 · ₱19,025 · 126 orders Oct 15 · ₱18,880 · 126 orders Oct 16 · ₱22,615 · 141 orders Oct 17 · ₱13,985 · 91 orders Oct 18 · ₱14,995 · 95 orders Oct 19 · ₱19,860 · 133 orders Oct 20 · ₱19,195 · 125 orders Oct 21 · ₱23,665 · 142 orders Oct 22 · ₱19,945 · 126 orders Oct 23 · ₱21,845 · 139 orders Oct 24 · ₱13,615 · 91 orders Oct 25 · ₱13,910 · 95 orders Oct 26 · ₱21,490 · 126 orders Oct 27 · ₱20,680 · 139 orders Oct 28 · ₱20,260 · 126 orders Oct 29 · ₱18,820 · 124 orders Oct 30 · ₱21,065 · 139 orders Oct 31 · ₱14,720 · 96 orders Nov 1 · ₱13,730 · 93 orders Nov 2 · ₱19,300 · 127 orders Nov 3 · ₱20,710 · 129 orders Nov 4 · ₱19,435 · 135 orders Nov 5 · ₱20,840 · 136 orders Today · ₱10,085 · 68 orders Edit the numbers here and the matching points/bars in the SVG (the data-tip text on each hit area is its tooltip), or let the backend draw the chart. -->
+                      <div class="chart mt-3 min-h-[320px]" tabindex="0" role="group" aria-label="Daily sales for the last 30 complete days and today. Use the arrow keys to read each value, Escape to close.">
+                        <div class="min-[560px]:hidden">
+                          <svg viewBox="0 0 324 320" role="img" aria-label="Daily sales for the last 30 complete days and today. Today's plotted value is ₱10,085, matching Today's Sales." class="fill-w">
+  <defs>
+  <linearGradient id="trend-daily-narrow-area" x1="0" x2="0" y1="0" y2="1">
+  <stop class="area-top" offset="0"/>
+  <stop class="area-bottom" offset="1"/>
+  </linearGradient>
+  </defs>
+  <line class="axis" x1="48" x2="312" y1="292" y2="292"/><text x="40" y="296" text-anchor="end">₱0</text>
+  <line class="grid" x1="48" x2="312" y1="236" y2="236"/><text x="40" y="240" text-anchor="end">₱5K</text>
+  <line class="grid" x1="48" x2="312" y1="180" y2="180"/><text x="40" y="184" text-anchor="end">₱10K</text>
+  <line class="grid" x1="48" x2="312" y1="124" y2="124"/><text x="40" y="128" text-anchor="end">₱15K</text>
+  <line class="grid" x1="48" x2="312" y1="68" y2="68"/><text x="40" y="72" text-anchor="end">₱20K</text>
+  <line class="grid" x1="48" x2="312" y1="12" y2="12"/><text x="40" y="16" text-anchor="end">₱25K</text><text x="100.8" y="314" text-anchor="middle">Oct 13</text><text x="171.2" y="314" text-anchor="middle">Oct 21</text>
+  <text x="241.6" y="314" text-anchor="middle">Oct 29</text>
+  <text x="312.0" y="314" text-anchor="end">Today</text>
+  <path d="M48.0 64.4 L56.8 69.2 L65.6 37.7 L74.4 133.9 L83.2 129.5 L92.0 66.2 L100.8 62.8 L109.6 78.9 L118.4 80.5 L127.2 38.7 L136.0 135.4 L144.8 124.1 L153.6 69.6 L162.4 77.0 L171.2 27.0 L180.0 68.6 L188.8 47.3 L197.6 139.5 L206.4 136.2 L215.2 51.3 L224.0 60.4 L232.8 65.1 L241.6 81.2 L250.4 56.1 L259.2 127.1 L268.0 138.2 L276.8 75.8 L285.6 60.0 L294.4 74.3 L303.2 58.6 L303.2 292 L48.0 292 Z" fill="url(#trend-daily-narrow-area)"/>
+  <path class="line" d="M48.0 64.4 L56.8 69.2 L65.6 37.7 L74.4 133.9 L83.2 129.5 L92.0 66.2 L100.8 62.8 L109.6 78.9 L118.4 80.5 L127.2 38.7 L136.0 135.4 L144.8 124.1 L153.6 69.6 L162.4 77.0 L171.2 27.0 L180.0 68.6 L188.8 47.3 L197.6 139.5 L206.4 136.2 L215.2 51.3 L224.0 60.4 L232.8 65.1 L241.6 81.2 L250.4 56.1 L259.2 127.1 L268.0 138.2 L276.8 75.8 L285.6 60.0 L294.4 74.3 L303.2 58.6"/>
+  <path class="line line-partial" d="M303.2 58.6 L312.0 179.0"/>
+  <circle class="dot-partial" cx="312.0" cy="179.0" r="5"/>
+  <g class="pt"><line class="guide" x1="48.0" x2="48.0" y1="12" y2="292"/><circle class="dot-hover" cx="48.0" cy="64.4" r="5"/><rect class="hit" x="43.6" y="12" width="8.8" height="280" data-tip="Oct 7 · ₱20,320 · 137 orders"/></g>
+  <g class="pt"><line class="guide" x1="56.8" x2="56.8" y1="12" y2="292"/><circle class="dot-hover" cx="56.8" cy="69.2" r="5"/><rect class="hit" x="52.4" y="12" width="8.8" height="280" data-tip="Oct 8 · ₱19,895 · 136 orders"/></g>
+  <g class="pt"><line class="guide" x1="65.6" x2="65.6" y1="12" y2="292"/><circle class="dot-hover" cx="65.6" cy="37.7" r="5"/><rect class="hit" x="61.2" y="12" width="8.8" height="280" data-tip="Oct 9 · ₱22,705 · 145 orders"/></g>
+  <g class="pt"><line class="guide" x1="74.4" x2="74.4" y1="12" y2="292"/><circle class="dot-hover" cx="74.4" cy="133.9" r="5"/><rect class="hit" x="70.0" y="12" width="8.8" height="280" data-tip="Oct 10 · ₱14,115 · 97 orders"/></g>
+  <g class="pt"><line class="guide" x1="83.2" x2="83.2" y1="12" y2="292"/><circle class="dot-hover" cx="83.2" cy="129.5" r="5"/><rect class="hit" x="78.8" y="12" width="8.8" height="280" data-tip="Oct 11 · ₱14,505 · 90 orders"/></g>
+  <g class="pt"><line class="guide" x1="92.0" x2="92.0" y1="12" y2="292"/><circle class="dot-hover" cx="92.0" cy="66.2" r="5"/><rect class="hit" x="87.6" y="12" width="8.8" height="280" data-tip="Oct 12 · ₱20,160 · 128 orders"/></g>
+  <g class="pt"><line class="guide" x1="100.8" x2="100.8" y1="12" y2="292"/><circle class="dot-hover" cx="100.8" cy="62.8" r="5"/><rect class="hit" x="96.4" y="12" width="8.8" height="280" data-tip="Oct 13 · ₱20,465 · 134 orders"/></g>
+  <g class="pt"><line class="guide" x1="109.6" x2="109.6" y1="12" y2="292"/><circle class="dot-hover" cx="109.6" cy="78.9" r="5"/><rect class="hit" x="105.2" y="12" width="8.8" height="280" data-tip="Oct 14 · ₱19,025 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="118.4" x2="118.4" y1="12" y2="292"/><circle class="dot-hover" cx="118.4" cy="80.5" r="5"/><rect class="hit" x="114.0" y="12" width="8.8" height="280" data-tip="Oct 15 · ₱18,880 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="127.2" x2="127.2" y1="12" y2="292"/><circle class="dot-hover" cx="127.2" cy="38.7" r="5"/><rect class="hit" x="122.8" y="12" width="8.8" height="280" data-tip="Oct 16 · ₱22,615 · 141 orders"/></g>
+  <g class="pt"><line class="guide" x1="136.0" x2="136.0" y1="12" y2="292"/><circle class="dot-hover" cx="136.0" cy="135.4" r="5"/><rect class="hit" x="131.6" y="12" width="8.8" height="280" data-tip="Oct 17 · ₱13,985 · 91 orders"/></g>
+  <g class="pt"><line class="guide" x1="144.8" x2="144.8" y1="12" y2="292"/><circle class="dot-hover" cx="144.8" cy="124.1" r="5"/><rect class="hit" x="140.4" y="12" width="8.8" height="280" data-tip="Oct 18 · ₱14,995 · 95 orders"/></g>
+  <g class="pt"><line class="guide" x1="153.6" x2="153.6" y1="12" y2="292"/><circle class="dot-hover" cx="153.6" cy="69.6" r="5"/><rect class="hit" x="149.2" y="12" width="8.8" height="280" data-tip="Oct 19 · ₱19,860 · 133 orders"/></g>
+  <g class="pt"><line class="guide" x1="162.4" x2="162.4" y1="12" y2="292"/><circle class="dot-hover" cx="162.4" cy="77.0" r="5"/><rect class="hit" x="158.0" y="12" width="8.8" height="280" data-tip="Oct 20 · ₱19,195 · 125 orders"/></g>
+  <g class="pt"><line class="guide" x1="171.2" x2="171.2" y1="12" y2="292"/><circle class="dot-hover" cx="171.2" cy="27.0" r="5"/><rect class="hit" x="166.8" y="12" width="8.8" height="280" data-tip="Oct 21 · ₱23,665 · 142 orders"/></g>
+  <g class="pt"><line class="guide" x1="180.0" x2="180.0" y1="12" y2="292"/><circle class="dot-hover" cx="180.0" cy="68.6" r="5"/><rect class="hit" x="175.6" y="12" width="8.8" height="280" data-tip="Oct 22 · ₱19,945 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="188.8" x2="188.8" y1="12" y2="292"/><circle class="dot-hover" cx="188.8" cy="47.3" r="5"/><rect class="hit" x="184.4" y="12" width="8.8" height="280" data-tip="Oct 23 · ₱21,845 · 139 orders"/></g>
+  <g class="pt"><line class="guide" x1="197.6" x2="197.6" y1="12" y2="292"/><circle class="dot-hover" cx="197.6" cy="139.5" r="5"/><rect class="hit" x="193.2" y="12" width="8.8" height="280" data-tip="Oct 24 · ₱13,615 · 91 orders"/></g>
+  <g class="pt"><line class="guide" x1="206.4" x2="206.4" y1="12" y2="292"/><circle class="dot-hover" cx="206.4" cy="136.2" r="5"/><rect class="hit" x="202.0" y="12" width="8.8" height="280" data-tip="Oct 25 · ₱13,910 · 95 orders"/></g>
+  <g class="pt"><line class="guide" x1="215.2" x2="215.2" y1="12" y2="292"/><circle class="dot-hover" cx="215.2" cy="51.3" r="5"/><rect class="hit" x="210.8" y="12" width="8.8" height="280" data-tip="Oct 26 · ₱21,490 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="224.0" x2="224.0" y1="12" y2="292"/><circle class="dot-hover" cx="224.0" cy="60.4" r="5"/><rect class="hit" x="219.6" y="12" width="8.8" height="280" data-tip="Oct 27 · ₱20,680 · 139 orders"/></g>
+  <g class="pt"><line class="guide" x1="232.8" x2="232.8" y1="12" y2="292"/><circle class="dot-hover" cx="232.8" cy="65.1" r="5"/><rect class="hit" x="228.4" y="12" width="8.8" height="280" data-tip="Oct 28 · ₱20,260 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="241.6" x2="241.6" y1="12" y2="292"/><circle class="dot-hover" cx="241.6" cy="81.2" r="5"/><rect class="hit" x="237.2" y="12" width="8.8" height="280" data-tip="Oct 29 · ₱18,820 · 124 orders"/></g>
+  <g class="pt"><line class="guide" x1="250.4" x2="250.4" y1="12" y2="292"/><circle class="dot-hover" cx="250.4" cy="56.1" r="5"/><rect class="hit" x="246.0" y="12" width="8.8" height="280" data-tip="Oct 30 · ₱21,065 · 139 orders"/></g>
+  <g class="pt"><line class="guide" x1="259.2" x2="259.2" y1="12" y2="292"/><circle class="dot-hover" cx="259.2" cy="127.1" r="5"/><rect class="hit" x="254.8" y="12" width="8.8" height="280" data-tip="Oct 31 · ₱14,720 · 96 orders"/></g>
+  <g class="pt"><line class="guide" x1="268.0" x2="268.0" y1="12" y2="292"/><circle class="dot-hover" cx="268.0" cy="138.2" r="5"/><rect class="hit" x="263.6" y="12" width="8.8" height="280" data-tip="Nov 1 · ₱13,730 · 93 orders"/></g>
+  <g class="pt"><line class="guide" x1="276.8" x2="276.8" y1="12" y2="292"/><circle class="dot-hover" cx="276.8" cy="75.8" r="5"/><rect class="hit" x="272.4" y="12" width="8.8" height="280" data-tip="Nov 2 · ₱19,300 · 127 orders"/></g>
+  <g class="pt"><line class="guide" x1="285.6" x2="285.6" y1="12" y2="292"/><circle class="dot-hover" cx="285.6" cy="60.0" r="5"/><rect class="hit" x="281.2" y="12" width="8.8" height="280" data-tip="Nov 3 · ₱20,710 · 129 orders"/></g>
+  <g class="pt"><line class="guide" x1="294.4" x2="294.4" y1="12" y2="292"/><circle class="dot-hover" cx="294.4" cy="74.3" r="5"/><rect class="hit" x="290.0" y="12" width="8.8" height="280" data-tip="Nov 4 · ₱19,435 · 135 orders"/></g>
+  <g class="pt"><line class="guide" x1="303.2" x2="303.2" y1="12" y2="292"/><circle class="dot-hover" cx="303.2" cy="58.6" r="5"/><rect class="hit" x="298.8" y="12" width="8.8" height="280" data-tip="Nov 5 · ₱20,840 · 136 orders"/></g>
+  <g class="pt"><line class="guide" x1="312.0" x2="312.0" y1="12" y2="292"/><circle class="dot-hover" cx="312.0" cy="179.0" r="5"/><rect class="hit" x="307.6" y="12" width="8.8" height="280" data-tip="Today · ₱10,085 · 68 orders"/></g>
+                          </svg>
+                        </div>
+                        <div class="hidden min-[560px]:block">
+                          <svg viewBox="0 0 689 320" role="img" aria-label="Daily sales for the last 30 complete days and today. Today's plotted value is ₱10,085, matching Today's Sales." class="fill-w">
+  <defs>
+  <linearGradient id="trend-daily-wide-area" x1="0" x2="0" y1="0" y2="1">
+  <stop class="area-top" offset="0"/>
+  <stop class="area-bottom" offset="1"/>
+  </linearGradient>
+  </defs>
+  <line class="axis" x1="48" x2="677" y1="292" y2="292"/><text x="40" y="296" text-anchor="end">₱0</text>
+  <line class="grid" x1="48" x2="677" y1="236" y2="236"/><text x="40" y="240" text-anchor="end">₱5K</text>
+  <line class="grid" x1="48" x2="677" y1="180" y2="180"/><text x="40" y="184" text-anchor="end">₱10K</text>
+  <line class="grid" x1="48" x2="677" y1="124" y2="124"/><text x="40" y="128" text-anchor="end">₱15K</text>
+  <line class="grid" x1="48" x2="677" y1="68" y2="68"/><text x="40" y="72" text-anchor="end">₱20K</text>
+  <line class="grid" x1="48" x2="677" y1="12" y2="12"/><text x="40" y="16" text-anchor="end">₱25K</text><text x="89.9" y="314" text-anchor="middle">Oct 9</text><text x="173.8" y="314" text-anchor="middle">Oct 13</text>
+  <text x="257.7" y="314" text-anchor="middle">Oct 17</text>
+  <text x="341.5" y="314" text-anchor="middle">Oct 21</text>
+  <text x="425.4" y="314" text-anchor="middle">Oct 25</text>
+  <text x="509.3" y="314" text-anchor="middle">Oct 29</text>
+  <text x="593.1" y="314" text-anchor="middle">Nov 2</text>
+  <text x="677.0" y="314" text-anchor="end">Today</text>
+  <path d="M48.0 64.4 L69.0 69.2 L89.9 37.7 L110.9 133.9 L131.9 129.5 L152.8 66.2 L173.8 62.8 L194.8 78.9 L215.7 80.5 L236.7 38.7 L257.7 135.4 L278.6 124.1 L299.6 69.6 L320.6 77.0 L341.5 27.0 L362.5 68.6 L383.5 47.3 L404.4 139.5 L425.4 136.2 L446.4 51.3 L467.3 60.4 L488.3 65.1 L509.3 81.2 L530.2 56.1 L551.2 127.1 L572.2 138.2 L593.1 75.8 L614.1 60.0 L635.1 74.3 L656.0 58.6 L656.0 292 L48.0 292 Z" fill="url(#trend-daily-wide-area)"/>
+  <path class="line" d="M48.0 64.4 L69.0 69.2 L89.9 37.7 L110.9 133.9 L131.9 129.5 L152.8 66.2 L173.8 62.8 L194.8 78.9 L215.7 80.5 L236.7 38.7 L257.7 135.4 L278.6 124.1 L299.6 69.6 L320.6 77.0 L341.5 27.0 L362.5 68.6 L383.5 47.3 L404.4 139.5 L425.4 136.2 L446.4 51.3 L467.3 60.4 L488.3 65.1 L509.3 81.2 L530.2 56.1 L551.2 127.1 L572.2 138.2 L593.1 75.8 L614.1 60.0 L635.1 74.3 L656.0 58.6"/>
+  <path class="line line-partial" d="M656.0 58.6 L677.0 179.0"/>
+  <circle class="dot-partial" cx="677.0" cy="179.0" r="5"/>
+  <g class="pt"><line class="guide" x1="48.0" x2="48.0" y1="12" y2="292"/><circle class="dot-hover" cx="48.0" cy="64.4" r="5"/><rect class="hit" x="37.5" y="12" width="21.0" height="280" data-tip="Oct 7 · ₱20,320 · 137 orders"/></g>
+  <g class="pt"><line class="guide" x1="69.0" x2="69.0" y1="12" y2="292"/><circle class="dot-hover" cx="69.0" cy="69.2" r="5"/><rect class="hit" x="58.5" y="12" width="21.0" height="280" data-tip="Oct 8 · ₱19,895 · 136 orders"/></g>
+  <g class="pt"><line class="guide" x1="89.9" x2="89.9" y1="12" y2="292"/><circle class="dot-hover" cx="89.9" cy="37.7" r="5"/><rect class="hit" x="79.5" y="12" width="21.0" height="280" data-tip="Oct 9 · ₱22,705 · 145 orders"/></g>
+  <g class="pt"><line class="guide" x1="110.9" x2="110.9" y1="12" y2="292"/><circle class="dot-hover" cx="110.9" cy="133.9" r="5"/><rect class="hit" x="100.4" y="12" width="21.0" height="280" data-tip="Oct 10 · ₱14,115 · 97 orders"/></g>
+  <g class="pt"><line class="guide" x1="131.9" x2="131.9" y1="12" y2="292"/><circle class="dot-hover" cx="131.9" cy="129.5" r="5"/><rect class="hit" x="121.4" y="12" width="21.0" height="280" data-tip="Oct 11 · ₱14,505 · 90 orders"/></g>
+  <g class="pt"><line class="guide" x1="152.8" x2="152.8" y1="12" y2="292"/><circle class="dot-hover" cx="152.8" cy="66.2" r="5"/><rect class="hit" x="142.3" y="12" width="21.0" height="280" data-tip="Oct 12 · ₱20,160 · 128 orders"/></g>
+  <g class="pt"><line class="guide" x1="173.8" x2="173.8" y1="12" y2="292"/><circle class="dot-hover" cx="173.8" cy="62.8" r="5"/><rect class="hit" x="163.3" y="12" width="21.0" height="280" data-tip="Oct 13 · ₱20,465 · 134 orders"/></g>
+  <g class="pt"><line class="guide" x1="194.8" x2="194.8" y1="12" y2="292"/><circle class="dot-hover" cx="194.8" cy="78.9" r="5"/><rect class="hit" x="184.3" y="12" width="21.0" height="280" data-tip="Oct 14 · ₱19,025 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="215.7" x2="215.7" y1="12" y2="292"/><circle class="dot-hover" cx="215.7" cy="80.5" r="5"/><rect class="hit" x="205.3" y="12" width="21.0" height="280" data-tip="Oct 15 · ₱18,880 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="236.7" x2="236.7" y1="12" y2="292"/><circle class="dot-hover" cx="236.7" cy="38.7" r="5"/><rect class="hit" x="226.2" y="12" width="21.0" height="280" data-tip="Oct 16 · ₱22,615 · 141 orders"/></g>
+  <g class="pt"><line class="guide" x1="257.7" x2="257.7" y1="12" y2="292"/><circle class="dot-hover" cx="257.7" cy="135.4" r="5"/><rect class="hit" x="247.2" y="12" width="21.0" height="280" data-tip="Oct 17 · ₱13,985 · 91 orders"/></g>
+  <g class="pt"><line class="guide" x1="278.6" x2="278.6" y1="12" y2="292"/><circle class="dot-hover" cx="278.6" cy="124.1" r="5"/><rect class="hit" x="268.1" y="12" width="21.0" height="280" data-tip="Oct 18 · ₱14,995 · 95 orders"/></g>
+  <g class="pt"><line class="guide" x1="299.6" x2="299.6" y1="12" y2="292"/><circle class="dot-hover" cx="299.6" cy="69.6" r="5"/><rect class="hit" x="289.1" y="12" width="21.0" height="280" data-tip="Oct 19 · ₱19,860 · 133 orders"/></g>
+  <g class="pt"><line class="guide" x1="320.6" x2="320.6" y1="12" y2="292"/><circle class="dot-hover" cx="320.6" cy="77.0" r="5"/><rect class="hit" x="310.1" y="12" width="21.0" height="280" data-tip="Oct 20 · ₱19,195 · 125 orders"/></g>
+  <g class="pt"><line class="guide" x1="341.5" x2="341.5" y1="12" y2="292"/><circle class="dot-hover" cx="341.5" cy="27.0" r="5"/><rect class="hit" x="331.1" y="12" width="21.0" height="280" data-tip="Oct 21 · ₱23,665 · 142 orders"/></g>
+  <g class="pt"><line class="guide" x1="362.5" x2="362.5" y1="12" y2="292"/><circle class="dot-hover" cx="362.5" cy="68.6" r="5"/><rect class="hit" x="352.0" y="12" width="21.0" height="280" data-tip="Oct 22 · ₱19,945 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="383.5" x2="383.5" y1="12" y2="292"/><circle class="dot-hover" cx="383.5" cy="47.3" r="5"/><rect class="hit" x="373.0" y="12" width="21.0" height="280" data-tip="Oct 23 · ₱21,845 · 139 orders"/></g>
+  <g class="pt"><line class="guide" x1="404.4" x2="404.4" y1="12" y2="292"/><circle class="dot-hover" cx="404.4" cy="139.5" r="5"/><rect class="hit" x="393.9" y="12" width="21.0" height="280" data-tip="Oct 24 · ₱13,615 · 91 orders"/></g>
+  <g class="pt"><line class="guide" x1="425.4" x2="425.4" y1="12" y2="292"/><circle class="dot-hover" cx="425.4" cy="136.2" r="5"/><rect class="hit" x="414.9" y="12" width="21.0" height="280" data-tip="Oct 25 · ₱13,910 · 95 orders"/></g>
+  <g class="pt"><line class="guide" x1="446.4" x2="446.4" y1="12" y2="292"/><circle class="dot-hover" cx="446.4" cy="51.3" r="5"/><rect class="hit" x="435.9" y="12" width="21.0" height="280" data-tip="Oct 26 · ₱21,490 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="467.3" x2="467.3" y1="12" y2="292"/><circle class="dot-hover" cx="467.3" cy="60.4" r="5"/><rect class="hit" x="456.8" y="12" width="21.0" height="280" data-tip="Oct 27 · ₱20,680 · 139 orders"/></g>
+  <g class="pt"><line class="guide" x1="488.3" x2="488.3" y1="12" y2="292"/><circle class="dot-hover" cx="488.3" cy="65.1" r="5"/><rect class="hit" x="477.8" y="12" width="21.0" height="280" data-tip="Oct 28 · ₱20,260 · 126 orders"/></g>
+  <g class="pt"><line class="guide" x1="509.3" x2="509.3" y1="12" y2="292"/><circle class="dot-hover" cx="509.3" cy="81.2" r="5"/><rect class="hit" x="498.8" y="12" width="21.0" height="280" data-tip="Oct 29 · ₱18,820 · 124 orders"/></g>
+  <g class="pt"><line class="guide" x1="530.2" x2="530.2" y1="12" y2="292"/><circle class="dot-hover" cx="530.2" cy="56.1" r="5"/><rect class="hit" x="519.8" y="12" width="21.0" height="280" data-tip="Oct 30 · ₱21,065 · 139 orders"/></g>
+  <g class="pt"><line class="guide" x1="551.2" x2="551.2" y1="12" y2="292"/><circle class="dot-hover" cx="551.2" cy="127.1" r="5"/><rect class="hit" x="540.7" y="12" width="21.0" height="280" data-tip="Oct 31 · ₱14,720 · 96 orders"/></g>
+  <g class="pt"><line class="guide" x1="572.2" x2="572.2" y1="12" y2="292"/><circle class="dot-hover" cx="572.2" cy="138.2" r="5"/><rect class="hit" x="561.7" y="12" width="21.0" height="280" data-tip="Nov 1 · ₱13,730 · 93 orders"/></g>
+  <g class="pt"><line class="guide" x1="593.1" x2="593.1" y1="12" y2="292"/><circle class="dot-hover" cx="593.1" cy="75.8" r="5"/><rect class="hit" x="582.6" y="12" width="21.0" height="280" data-tip="Nov 2 · ₱19,300 · 127 orders"/></g>
+  <g class="pt"><line class="guide" x1="614.1" x2="614.1" y1="12" y2="292"/><circle class="dot-hover" cx="614.1" cy="60.0" r="5"/><rect class="hit" x="603.6" y="12" width="21.0" height="280" data-tip="Nov 3 · ₱20,710 · 129 orders"/></g>
+  <g class="pt"><line class="guide" x1="635.1" x2="635.1" y1="12" y2="292"/><circle class="dot-hover" cx="635.1" cy="74.3" r="5"/><rect class="hit" x="624.6" y="12" width="21.0" height="280" data-tip="Nov 4 · ₱19,435 · 135 orders"/></g>
+  <g class="pt"><line class="guide" x1="656.0" x2="656.0" y1="12" y2="292"/><circle class="dot-hover" cx="656.0" cy="58.6" r="5"/><rect class="hit" x="645.5" y="12" width="21.0" height="280" data-tip="Nov 5 · ₱20,840 · 136 orders"/></g>
+  <g class="pt"><line class="guide" x1="677.0" x2="677.0" y1="12" y2="292"/><circle class="dot-hover" cx="677.0" cy="179.0" r="5"/><rect class="hit" x="666.5" y="12" width="21.0" height="280" data-tip="Today · ₱10,085 · 68 orders"/></g>
+                          </svg>
+                        </div>
+                        <div class="chart-tip" role="status" hidden></div>
+                      </div>
+                      <div class="sr-only">
+                        <table>
+                          <caption>Daily sales (₱) — last 30 complete days, then today</caption>
+                          <thead>
+                            <tr><th scope="col">Day</th><th scope="col">Sales</th><th scope="col">Orders</th></tr>
+                          </thead>
+                          <tbody>
+                            <tr><th scope="row">Oct 7</th><td>₱20,320</td><td>137 orders</td></tr>
+                            <tr><th scope="row">Oct 8</th><td>₱19,895</td><td>136 orders</td></tr>
+                            <tr><th scope="row">Oct 9</th><td>₱22,705</td><td>145 orders</td></tr>
+                            <tr><th scope="row">Oct 10</th><td>₱14,115</td><td>97 orders</td></tr>
+                            <tr><th scope="row">Oct 11</th><td>₱14,505</td><td>90 orders</td></tr>
+                            <tr><th scope="row">Oct 12</th><td>₱20,160</td><td>128 orders</td></tr>
+                            <tr><th scope="row">Oct 13</th><td>₱20,465</td><td>134 orders</td></tr>
+                            <tr><th scope="row">Oct 14</th><td>₱19,025</td><td>126 orders</td></tr>
+                            <tr><th scope="row">Oct 15</th><td>₱18,880</td><td>126 orders</td></tr>
+                            <tr><th scope="row">Oct 16</th><td>₱22,615</td><td>141 orders</td></tr>
+                            <tr><th scope="row">Oct 17</th><td>₱13,985</td><td>91 orders</td></tr>
+                            <tr><th scope="row">Oct 18</th><td>₱14,995</td><td>95 orders</td></tr>
+                            <tr><th scope="row">Oct 19</th><td>₱19,860</td><td>133 orders</td></tr>
+                            <tr><th scope="row">Oct 20</th><td>₱19,195</td><td>125 orders</td></tr>
+                            <tr><th scope="row">Oct 21</th><td>₱23,665</td><td>142 orders</td></tr>
+                            <tr><th scope="row">Oct 22</th><td>₱19,945</td><td>126 orders</td></tr>
+                            <tr><th scope="row">Oct 23</th><td>₱21,845</td><td>139 orders</td></tr>
+                            <tr><th scope="row">Oct 24</th><td>₱13,615</td><td>91 orders</td></tr>
+                            <tr><th scope="row">Oct 25</th><td>₱13,910</td><td>95 orders</td></tr>
+                            <tr><th scope="row">Oct 26</th><td>₱21,490</td><td>126 orders</td></tr>
+                            <tr><th scope="row">Oct 27</th><td>₱20,680</td><td>139 orders</td></tr>
+                            <tr><th scope="row">Oct 28</th><td>₱20,260</td><td>126 orders</td></tr>
+                            <tr><th scope="row">Oct 29</th><td>₱18,820</td><td>124 orders</td></tr>
+                            <tr><th scope="row">Oct 30</th><td>₱21,065</td><td>139 orders</td></tr>
+                            <tr><th scope="row">Oct 31</th><td>₱14,720</td><td>96 orders</td></tr>
+                            <tr><th scope="row">Nov 1</th><td>₱13,730</td><td>93 orders</td></tr>
+                            <tr><th scope="row">Nov 2</th><td>₱19,300</td><td>127 orders</td></tr>
+                            <tr><th scope="row">Nov 3</th><td>₱20,710</td><td>129 orders</td></tr>
+                            <tr><th scope="row">Nov 4</th><td>₱19,435</td><td>135 orders</td></tr>
+                            <tr><th scope="row">Nov 5</th><td>₱20,840</td><td>136 orders</td></tr>
+                            <tr><th scope="row">Today</th><td>₱10,085</td><td>68 orders</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p class="hint">Dashed endpoint is today and matches Today’s Sales above.</p>
+                      <dl class="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Best day</dt> <dd class="tabular mt-0.5 title-lg">₱23,665</dd> <dd class="text-[13px] text-slate-600">Oct 21</dd> </div>
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Slowest day</dt> <dd class="tabular mt-0.5 title-lg">₱13,615</dd> <dd class="text-[13px] text-slate-600">Oct 24</dd> </div>
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Orders (30 days)</dt> <dd class="tabular mt-0.5 title-lg">3,667</dd> <dd class="text-[13px] text-slate-600">122 per day</dd> </div>
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Average order</dt> <dd class="tabular mt-0.5 title-lg">₱154</dd> <dd class="text-[13px] text-slate-600">per order</dd> </div>
+                      </dl>
+                    </div>
+                    <div id="trend-monthly" data-tab-panel="trend" hidden>
+                      <p class="text-sm text-slate-700">Last 6 months: ₱2,885,005 · Nov to date ₱104,100</p>
+                      <!-- CHART DATA — Monthly sales (₱) — last 6 months, the last bar is the month to date Jun · ₱521,441 · 3,442 orders Jul · ₱561,400 · 3,696 orders Aug · ₱557,555 · 3,675 orders Sep · ₱561,589 · 3,721 orders Oct · ₱578,920 · 3,766 orders Nov (month to date) · ₱104,100 · 688 orders Edit the numbers here and the matching points/bars in the SVG (the data-tip text on each hit area is its tooltip), or let the backend draw the chart. -->
+                      <div class="chart mt-3 min-h-[320px]" tabindex="0" role="group" aria-label="Monthly sales for the last 6 months. Use the arrow keys to read each value, Escape to close.">
+                        <div class="min-[560px]:hidden">
+                          <svg viewBox="0 0 324 300" role="img" aria-label="Monthly sales for the last 6 months. Jun ₱521,441, Jul ₱561,400, Aug ₱557,555, Sep ₱561,589, Oct ₱578,920, Nov ₱104,100." class="fill-w">
+  <line class="axis" x1="48" x2="312" y1="272" y2="272"/><text x="40" y="276" text-anchor="end">₱0</text>
+  <line class="grid" x1="48" x2="312" y1="207" y2="207"/><text x="40" y="211" text-anchor="end">₱200K</text>
+  <line class="grid" x1="48" x2="312" y1="142" y2="142"/><text x="40" y="146" text-anchor="end">₱400K</text>
+  <line class="grid" x1="48" x2="312" y1="77" y2="77"/><text x="40" y="81" text-anchor="end">₱600K</text>
+  <line class="grid" x1="48" x2="312" y1="12" y2="12"/><text x="40" y="16" text-anchor="end">₱800K</text><text x="114.0" y="294" text-anchor="middle">Jul</text><text x="202.0" y="294" text-anchor="middle">Sep</text>
+  <text x="290.0" y="294" text-anchor="middle">Nov</text>
+  <g class="pt"><rect class="bar" x="56.4" y="102.5" width="27.3" height="169.5" rx="3"/><rect class="hit" x="48.0" y="12" width="44.0" height="260" data-tip="Jun · ₱521,441 · 3,442 orders"/></g>
+  <g class="pt"><rect class="bar" x="100.4" y="89.5" width="27.3" height="182.5" rx="3"/><rect class="hit" x="92.0" y="12" width="44.0" height="260" data-tip="Jul · ₱561,400 · 3,696 orders"/></g>
+  <g class="pt"><rect class="bar" x="144.4" y="90.8" width="27.3" height="181.2" rx="3"/><rect class="hit" x="136.0" y="12" width="44.0" height="260" data-tip="Aug · ₱557,555 · 3,675 orders"/></g>
+  <g class="pt"><rect class="bar" x="188.4" y="89.5" width="27.3" height="182.5" rx="3"/><rect class="hit" x="180.0" y="12" width="44.0" height="260" data-tip="Sep · ₱561,589 · 3,721 orders"/></g>
+  <g class="pt"><rect class="bar" x="232.4" y="83.9" width="27.3" height="188.1" rx="3"/><rect class="hit" x="224.0" y="12" width="44.0" height="260" data-tip="Oct · ₱578,920 · 3,766 orders"/></g>
+  <g class="pt"><rect class="bar-partial" x="276.4" y="238.2" width="27.3" height="33.8" rx="3"/><rect class="hit" x="268.0" y="12" width="44.0" height="260" data-tip="Nov (month to date) · ₱104,100 · 688 orders"/></g>
+                          </svg>
+                        </div>
+                        <div class="hidden min-[560px]:block">
+                          <svg viewBox="0 0 689 300" role="img" aria-label="Monthly sales for the last 6 months. Jun ₱521,441, Jul ₱561,400, Aug ₱557,555, Sep ₱561,589, Oct ₱578,920, Nov ₱104,100." class="fill-w">
+  <line class="axis" x1="48" x2="677" y1="272" y2="272"/><text x="40" y="276" text-anchor="end">₱0</text>
+  <line class="grid" x1="48" x2="677" y1="207" y2="207"/><text x="40" y="211" text-anchor="end">₱200K</text>
+  <line class="grid" x1="48" x2="677" y1="142" y2="142"/><text x="40" y="146" text-anchor="end">₱400K</text>
+  <line class="grid" x1="48" x2="677" y1="77" y2="77"/><text x="40" y="81" text-anchor="end">₱600K</text>
+  <line class="grid" x1="48" x2="677" y1="12" y2="12"/><text x="40" y="16" text-anchor="end">₱800K</text><text x="100.4" y="294" text-anchor="middle">Jun</text><text x="205.2" y="294" text-anchor="middle">Jul</text>
+  <text x="310.1" y="294" text-anchor="middle">Aug</text>
+  <text x="414.9" y="294" text-anchor="middle">Sep</text>
+  <text x="519.8" y="294" text-anchor="middle">Oct</text>
+  <text x="624.6" y="294" text-anchor="middle">Nov</text>
+  <g class="pt"><rect class="bar" x="78.4" y="102.5" width="44.0" height="169.5" rx="3"/><rect class="hit" x="48.0" y="12" width="104.8" height="260" data-tip="Jun · ₱521,441 · 3,442 orders"/></g>
+  <g class="pt"><rect class="bar" x="183.2" y="89.5" width="44.0" height="182.5" rx="3"/><rect class="hit" x="152.8" y="12" width="104.8" height="260" data-tip="Jul · ₱561,400 · 3,696 orders"/></g>
+  <g class="pt"><rect class="bar" x="288.1" y="90.8" width="44.0" height="181.2" rx="3"/><rect class="hit" x="257.7" y="12" width="104.8" height="260" data-tip="Aug · ₱557,555 · 3,675 orders"/></g>
+  <g class="pt"><rect class="bar" x="392.9" y="89.5" width="44.0" height="182.5" rx="3"/><rect class="hit" x="362.5" y="12" width="104.8" height="260" data-tip="Sep · ₱561,589 · 3,721 orders"/></g>
+  <g class="pt"><rect class="bar" x="497.8" y="83.9" width="44.0" height="188.1" rx="3"/><rect class="hit" x="467.3" y="12" width="104.8" height="260" data-tip="Oct · ₱578,920 · 3,766 orders"/></g>
+  <g class="pt"><rect class="bar-partial" x="602.6" y="238.2" width="44.0" height="33.8" rx="3"/><rect class="hit" x="572.2" y="12" width="104.8" height="260" data-tip="Nov (month to date) · ₱104,100 · 688 orders"/></g>
+                          </svg>
+                        </div>
+                        <div class="chart-tip" role="status" hidden></div>
+                      </div>
+                      <div class="sr-only">
+                        <table>
+                          <caption>Monthly sales (₱) — last 6 months, the last bar is the month to date</caption>
+                          <thead>
+                            <tr><th scope="col">Month</th><th scope="col">Sales</th><th scope="col">Orders</th></tr>
+                          </thead>
+                          <tbody>
+                            <tr><th scope="row">Jun</th><td>₱521,441</td><td>3,442 orders</td></tr>
+                            <tr><th scope="row">Jul</th><td>₱561,400</td><td>3,696 orders</td></tr>
+                            <tr><th scope="row">Aug</th><td>₱557,555</td><td>3,675 orders</td></tr>
+                            <tr><th scope="row">Sep</th><td>₱561,589</td><td>3,721 orders</td></tr>
+                            <tr><th scope="row">Oct</th><td>₱578,920</td><td>3,766 orders</td></tr>
+                            <tr><th scope="row">Nov (month to date)</th><td>₱104,100</td><td>688 orders</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p class="hint">Outlined bar = current month to date.</p>
+                      <dl class="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Best full month</dt> <dd class="tabular mt-0.5 title-lg">₱578,920</dd> <dd class="text-[13px] text-slate-600">Oct</dd> </div>
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Month to date</dt> <dd class="tabular mt-0.5 title-lg">₱104,100</dd> <dd class="text-[13px] text-slate-600">Nov · 688 orders</dd> </div>
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Orders (6 months)</dt> <dd class="tabular mt-0.5 title-lg">18,988</dd> </div>
+                        <div class="min-w-0"> <dt class="text-[13px] text-slate-600">Average order</dt> <dd class="tabular mt-0.5 title-lg">₱152</dd> <dd class="text-[13px] text-slate-600">per order</dd> </div>
+                      </dl>
+                    </div>
+                  </div>
+                </section>
+<!-- BEGIN CALENDAR LINK -->
+                <section class="card mt-4 row-between flex-wrap gap-x-4 gap-y-3 p-4 md:mt-6 md:p-6" aria-labelledby="calendar-link-title" data-id="sales-calendar-link">
+                  <div class="min-w-0 flex-1 basis-64">
+                    <h2 id="calendar-link-title" class="card-title">Sales calendar</h2>
+                    <p class="page-lead">Every day of the last 12 months: a heat-map of the year, a month grid with the sales of each day, and a day card with hourly sales and the top dishes.</p>
+                  </div>
+                  <a href="report-sales-trend.html#cal-sales" class="btn btn-secondary shrink-0">
+                    Open the calendar
+                    <svg width="16" height="16" viewBox="0 0 24 24" class="i" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  </a>
+                </section>
+                <!-- END CALENDAR LINK -->
+              </div>
+              <div class="min-w-0 xl:col-span-4">
+                <!-- Section: Best-Selling and Slow-Moving Dishes -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="dishes-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="dishes-title" class="card-title">Best-Selling and Slow-Moving Dishes</h2>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body">
+                    <div>
+                      <div class="seg" role="group" aria-label="Dish ranking period">
+                        <button type="button" aria-pressed="false" data-tab-group="dish-period" data-tab-target="dish-today">Today</button>
+                        <button type="button" aria-pressed="true" data-tab-group="dish-period" data-tab-target="dish-7">7 days</button>
+                        <button type="button" aria-pressed="false" data-tab-group="dish-period" data-tab-target="dish-30">30 days</button>
+                      </div>
+                    </div>
+                    <div id="dish-today" data-tab-panel="dish-period" class="mt-3" hidden>
+                      <p class="text-[13px] text-slate-600">Today · units sold</p>
+                      <h3 class="mb-1 mt-3 flex items-center gap-1.5 strong-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-brand" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                        Best-selling
+                      </h3>
+                      <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem] gap-x-2 border-b border-slate-200 pb-1.5 text-[13px] font-medium text-slate-600">
+                        <span>#</span>
+                        <span>Dish</span>
+                        <span class="text-right">Sold</span>
+                      </div>
+                      <ol class="divide-y divide-slate-100">
+                        <!-- Backend: one row for each of the dishes (ranked by units sold). Source: menu_item + order_item. Rule: units_sold = SUM(order_items.quantity) for the period; change = units_sold − units_sold in the prior period of the same length; portions_possible = MIN(usable_stock ÷ recipes.quantity_used) over the recipe. -->
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem] items-start gap-x-2 py-2.5" data-id="MNU-01">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">1</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Chicken Adobo Rice Meal</span>
+                          <span class="tabular text-right strong-sm">15</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem] items-start gap-x-2 py-2.5" data-id="MNU-03">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">2</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Beef Tapsilog</span>
+                          <span class="tabular text-right strong-sm">9</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem] items-start gap-x-2 py-2.5" data-id="MNU-13">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">3</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Cola</span>
+                          <span class="tabular text-right strong-sm">7</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem] items-start gap-x-2 py-2.5" data-id="MNU-12">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">4</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Iced Coffee</span>
+                          <span class="tabular text-right strong-sm">7</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem] items-start gap-x-2 py-2.5" data-id="MNU-08">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">5</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Pancit Canton</span>
+                          <span class="tabular text-right strong-sm">7</span>
+                        </li>
+                      </ol>
+                      <h3 class="mb-1 mt-5 flex items-center gap-1.5 strong-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg>
+                        Slow-moving
+                        <span class="font-normal text-slate-600">· lowest sellers</span>
+                      </h3>
+                      <p class="text-sm text-slate-600">Slow-moving dishes need at least 7 days of sales. Choose “7 days” or “30 days”.</p>
+                      <p class="mt-4 flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-800">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                        <span><strong>Unavailable now:</strong> Garlic Butter Shrimp Rice Meal (out of shrimp). Dish sales drive the ingredient forecast.</span>
+                      </p>
+                    </div>
+                    <div id="dish-7" data-tab-panel="dish-period" class="mt-3">
+                      <p class="text-[13px] text-slate-600">Last 7 days · units sold · change vs the 7 days before</p>
+                      <h3 class="mb-1 mt-3 flex items-center gap-1.5 strong-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-brand" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                        Best-selling
+                      </h3>
+                      <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] gap-x-2 border-b border-slate-200 pb-1.5 text-[13px] font-medium text-slate-600">
+                        <span>#</span>
+                        <span>Dish</span>
+                        <span class="text-right">Sold</span>
+                        <span class="text-right" title="Change vs the 7 days before">vs prior</span>
+                      </div>
+                      <ol class="divide-y divide-slate-100">
+                        <!-- Backend: one row for each of the dishes (ranked by units sold). Source: menu_item + order_item. Rule: units_sold = SUM(order_items.quantity) for the period; change = units_sold − units_sold in the prior period of the same length; portions_possible = MIN(usable_stock ÷ recipes.quantity_used) over the recipe. -->
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-01">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">1</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Chicken Adobo Rice Meal</span>
+                          <span class="tabular text-right strong-sm">142</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>10%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-12">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">2</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Iced Coffee</span>
+                          <span class="tabular text-right strong-sm">115</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>16%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-03">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">3</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Beef Tapsilog</span>
+                          <span class="tabular text-right strong-sm">111</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>16%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-06">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">4</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Fried Chicken Rice Meal</span>
+                          <span class="tabular text-right strong-sm">108</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg><span class="sr-only">Down </span>7%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-02">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">5</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Pork Sisig Rice Meal</span>
+                          <span class="tabular text-right strong-sm">105</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>3%</span>
+                        </li>
+                      </ol>
+                      <h3 class="mb-1 mt-5 flex items-center gap-1.5 strong-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg>
+                        Slow-moving
+                        <span class="font-normal text-slate-600">· lowest sellers</span>
+                      </h3>
+                      <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] gap-x-2 border-b border-slate-200 pb-1.5 text-[13px] font-medium text-slate-600">
+                        <span>#</span>
+                        <span>Dish</span>
+                        <span class="text-right">Sold</span>
+                        <span class="text-right" title="Change vs the 7 days before">vs prior</span>
+                      </div>
+                      <ol class="divide-y divide-slate-100">
+                        <!-- Backend: one row for each of the dishes (ranked by units sold). Source: menu_item + order_item. Rule: units_sold = SUM(order_items.quantity) for the period; change = units_sold − units_sold in the prior period of the same length; portions_possible = MIN(usable_stock ÷ recipes.quantity_used) over the recipe. -->
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="ING-11">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">1</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Garlic Butter Shrimp Rice Meal <span class="ml-1 inline-block align-middle"><span class="badge badge-red">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            Unavailable
+                          </span></span></span>
+                          <span class="tabular text-right strong-sm">21</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg><span class="sr-only">Down </span>34%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-15">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">2</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Leche Flan</span>
+                          <span class="tabular text-right strong-sm">25</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>9%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="ING-09">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">3</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Cheeseburger with Fries</span>
+                          <span class="tabular text-right strong-sm">51</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg><span class="sr-only">Down </span>16%</span>
+                        </li>
+                      </ol>
+                      <p class="mt-4 flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-800">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                        <span><strong>Unavailable now:</strong> Garlic Butter Shrimp Rice Meal (out of shrimp). Dish sales drive the ingredient forecast.</span>
+                      </p>
+                    </div>
+                    <div id="dish-30" data-tab-panel="dish-period" class="mt-3" hidden>
+                      <p class="text-[13px] text-slate-600">Last 30 days · units sold · change vs the 30 days before</p>
+                      <h3 class="mb-1 mt-3 flex items-center gap-1.5 strong-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-brand" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                        Best-selling
+                      </h3>
+                      <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] gap-x-2 border-b border-slate-200 pb-1.5 text-[13px] font-medium text-slate-600">
+                        <span>#</span>
+                        <span>Dish</span>
+                        <span class="text-right">Sold</span>
+                        <span class="text-right" title="Change vs the 30 days before">vs prior</span>
+                      </div>
+                      <ol class="divide-y divide-slate-100">
+                        <!-- Backend: one row for each of the dishes (ranked by units sold). Source: menu_item + order_item. Rule: units_sold = SUM(order_items.quantity) for the period; change = units_sold − units_sold in the prior period of the same length; portions_possible = MIN(usable_stock ÷ recipes.quantity_used) over the recipe. -->
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-01">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">1</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Chicken Adobo Rice Meal</span>
+                          <span class="tabular text-right strong-sm">590</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>5%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-06">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">2</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Fried Chicken Rice Meal</span>
+                          <span class="tabular text-right strong-sm">497</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>5%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-12">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">3</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Iced Coffee</span>
+                          <span class="tabular text-right strong-sm">479</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>5%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-03">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">4</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Beef Tapsilog</span>
+                          <span class="tabular text-right strong-sm">473</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>4%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-13">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">5</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Cola</span>
+                          <span class="tabular text-right strong-sm">460</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg><span class="sr-only">Down </span>1%</span>
+                        </li>
+                      </ol>
+                      <h3 class="mb-1 mt-5 flex items-center gap-1.5 strong-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></svg>
+                        Slow-moving
+                        <span class="font-normal text-slate-600">· lowest sellers</span>
+                      </h3>
+                      <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] gap-x-2 border-b border-slate-200 pb-1.5 text-[13px] font-medium text-slate-600">
+                        <span>#</span>
+                        <span>Dish</span>
+                        <span class="text-right">Sold</span>
+                        <span class="text-right" title="Change vs the 30 days before">vs prior</span>
+                      </div>
+                      <ol class="divide-y divide-slate-100">
+                        <!-- Backend: one row for each of the dishes (ranked by units sold). Source: menu_item + order_item. Rule: units_sold = SUM(order_items.quantity) for the period; change = units_sold − units_sold in the prior period of the same length; portions_possible = MIN(usable_stock ÷ recipes.quantity_used) over the recipe. -->
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="ING-11">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">1</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Garlic Butter Shrimp Rice Meal <span class="ml-1 inline-block align-middle"><span class="badge badge-red">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            Unavailable
+                          </span></span></span>
+                          <span class="tabular text-right strong-sm">115</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>14%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="MNU-15">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">2</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Leche Flan</span>
+                          <span class="tabular text-right strong-sm">117</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>24%</span>
+                        </li>
+                        <li class="grid grid-cols-[1.75rem_minmax(0,1fr)_3rem_4.75rem] items-start gap-x-2 py-2.5" data-id="ING-09">
+                          <span class="tabular text-sm font-semibold text-slate-600" aria-hidden="true">3</span>
+                          <span class="min-w-0 text-sm font-medium text-slate-900">Cheese Omelette</span>
+                          <span class="tabular text-right strong-sm">214</span>
+                          <span class="tabular text-right text-[13px] text-slate-700"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg><span class="sr-only">Up </span>14%</span>
+                        </li>
+                      </ol>
+                      <p class="mt-4 flex items-start gap-2 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-800">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                        <span><strong>Unavailable now:</strong> Garlic Butter Shrimp Rice Meal (out of shrimp). Dish sales drive the ingredient forecast.</span>
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <div class="min-w-0 xl:col-span-8">
+                <!-- Section: Current Ingredient Inventory Status -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="inventory-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="inventory-title" class="card-title">Current Ingredient Inventory Status</h2>
+                    </div>
+                    <div class="shrink-0">
+                      <div class="seg" role="group" aria-label="Inventory filter">
+                        <button type="button" aria-pressed="true" data-tab-group="inv" data-tab-target="inv-attention">Needs attention (9)</button>
+                        <button type="button" aria-pressed="false" data-tab-group="inv" data-tab-target="inv-all">All (25)</button>
+                      </div>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body !pt-3">
+                    <div id="inv-attention" data-tab-panel="inv">
+                      <div class="overflow-x-auto -mx-4 md:-mx-6">
+                        <table class="table">
+                          <caption class="sr-only">Current ingredient inventory status. Rows at or below the reorder level are highlighted and labelled Low or Out.</caption>
+                          <thead>
+                            <tr> <th scope="col">Ingredient</th> <th scope="col" class="col-sm">Unit</th> <th scope="col" class="num">Stock level</th> <th scope="col" class="num col-sm">Reorder level</th> <th scope="col" class="col-md">Expiry date</th> <th scope="col">Status</th> </tr>
+                          </thead>
+                          <tbody>
+                            <!-- Backend: one row for each of the ingredients (inventory status rows). Source: ingredient + inventory_batch. Rule: usable_stock = SUM(inventory_batches.current_quantity) where expiry_date >= today (expired batches are not counted); status: Out of Stock when usable_stock = 0; Critical when usable_stock < 50% of reorder_level; Low when usable_stock <= reorder_level; Near-Expiry when a batch expires within the near-expiry window; otherwise OK; the bar is usable_stock ÷ (2 × reorder_level), capped at 100%. -->
+                            <tr class="row-out" data-id="ING-05"> <th scope="row">Shrimp<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900 stock-qty">0<span class="cell-sub sm:hidden">reorder at 1.5</span></td> <td class="num col-sm text-slate-700">1.5</td> <td class="col-md text-slate-700">—</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-out"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg> Out of Stock </span> </span> </td> </tr>
+                            <tr class="row-low" data-id="ING-01"> <th scope="row">Chicken breast<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">9.7<span class="cell-sub sm:hidden">reorder at 21</span></td> <td class="num col-sm text-slate-700">21</td> <td class="col-md text-slate-700">Nov 17</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> </td> </tr>
+                            <tr class="row-low" data-id="ING-18"> <th scope="row">Cooking oil<span class="cell-sub sm:hidden">L</span></th> <td class="col-sm text-slate-700">L</td> <td class="num font-medium text-slate-900">8.3<span class="cell-sub sm:hidden">reorder at 20</span></td> <td class="num col-sm text-slate-700">20</td> <td class="col-md text-slate-700">Jul 31, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> <span class="mt-1 block text-[13px] text-slate-700">Incoming 30 L, due Nov 7</span> </td> </tr>
+                            <tr class="row-low" data-id="ING-06"> <th scope="row">Eggs<span class="cell-sub sm:hidden">tray (30 pcs)</span></th> <td class="col-sm text-slate-700">tray (30 pcs)</td> <td class="num font-medium text-slate-900">2.5<span class="cell-sub sm:hidden">reorder at 7</span></td> <td class="num col-sm text-slate-700">7</td> <td class="col-md text-slate-700">Nov 24</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> </td> </tr>
+                            <tr class="row-low" data-id="ING-12"> <th scope="row">Tomato<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">0.6<span class="cell-sub sm:hidden">reorder at 2</span></td> <td class="num col-sm text-slate-700">2</td> <td class="col-md text-slate-700">Nov 11</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> </td> </tr>
+                            <tr data-id="ING-04"> <th scope="row">Bangus (milkfish)<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">18.4<span class="cell-sub sm:hidden">reorder at 5</span></td> <td class="num col-sm text-slate-700">5</td> <td class="col-md font-semibold tone-amber">Nov 7<span class="block text-[13px] font-normal">tomorrow</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-13"> <th scope="row">Cabbage<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">7.7<span class="cell-sub sm:hidden">reorder at 2</span></td> <td class="num col-sm text-slate-700">2</td> <td class="col-md font-semibold tone-amber">Nov 8<span class="block text-[13px] font-normal">in 2 days</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-07"> <th scope="row">Fresh milk<span class="cell-sub sm:hidden">L</span></th> <td class="col-sm text-slate-700">L</td> <td class="num font-medium text-slate-900">25.7<span class="cell-sub sm:hidden">reorder at 11</span></td> <td class="num col-sm text-slate-700">11</td> <td class="col-md font-semibold tone-amber">Nov 8<span class="block text-[13px] font-normal">in 2 days</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-03"> <th scope="row">Ground beef<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">49.4<span class="cell-sub sm:hidden">reorder at 12</span></td> <td class="num col-sm text-slate-700">12</td> <td class="col-md font-semibold tone-amber">Nov 8<span class="block text-[13px] font-normal">in 2 days</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p class="hint-3">Showing 9 of 25 ingredients that need attention (low, out of stock or near expiry).</p>
+                    </div>
+                    <div id="inv-all" data-tab-panel="inv" hidden>
+                      <div class="scroll-thin max-h-[26rem] overflow-auto -mx-4 md:-mx-6" tabindex="0" role="region" aria-label="Ingredient inventory table, scrollable">
+                        <table class="table">
+                          <caption class="sr-only">Current ingredient inventory status. Rows at or below the reorder level are highlighted and labelled Low or Out.</caption>
+                          <thead>
+                            <tr> <th scope="col">Ingredient</th> <th scope="col" class="col-sm">Unit</th> <th scope="col" class="num">Stock level</th> <th scope="col" class="num col-sm">Reorder level</th> <th scope="col" class="col-md">Expiry date</th> <th scope="col">Status</th> </tr>
+                          </thead>
+                          <tbody>
+                            <!-- Backend: one row for each of the ingredients (inventory status rows). Source: ingredient + inventory_batch. Rule: usable_stock = SUM(inventory_batches.current_quantity) where expiry_date >= today (expired batches are not counted); status: Out of Stock when usable_stock = 0; Critical when usable_stock < 50% of reorder_level; Low when usable_stock <= reorder_level; Near-Expiry when a batch expires within the near-expiry window; otherwise OK; the bar is usable_stock ÷ (2 × reorder_level), capped at 100%. -->
+                            <tr class="row-out" data-id="ING-05"> <th scope="row">Shrimp<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900 stock-qty">0<span class="cell-sub sm:hidden">reorder at 1.5</span></td> <td class="num col-sm text-slate-700">1.5</td> <td class="col-md text-slate-700">—</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-out"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg> Out of Stock </span> </span> </td> </tr>
+                            <tr class="row-low" data-id="ING-01"> <th scope="row">Chicken breast<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">9.7<span class="cell-sub sm:hidden">reorder at 21</span></td> <td class="num col-sm text-slate-700">21</td> <td class="col-md text-slate-700">Nov 17</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> </td> </tr>
+                            <tr class="row-low" data-id="ING-18"> <th scope="row">Cooking oil<span class="cell-sub sm:hidden">L</span></th> <td class="col-sm text-slate-700">L</td> <td class="num font-medium text-slate-900">8.3<span class="cell-sub sm:hidden">reorder at 20</span></td> <td class="num col-sm text-slate-700">20</td> <td class="col-md text-slate-700">Jul 31, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> <span class="mt-1 block text-[13px] text-slate-700">Incoming 30 L, due Nov 7</span> </td> </tr>
+                            <tr class="row-low" data-id="ING-06"> <th scope="row">Eggs<span class="cell-sub sm:hidden">tray (30 pcs)</span></th> <td class="col-sm text-slate-700">tray (30 pcs)</td> <td class="num font-medium text-slate-900">2.5<span class="cell-sub sm:hidden">reorder at 7</span></td> <td class="num col-sm text-slate-700">7</td> <td class="col-md text-slate-700">Nov 24</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> </td> </tr>
+                            <tr class="row-low" data-id="ING-12"> <th scope="row">Tomato<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">0.6<span class="cell-sub sm:hidden">reorder at 2</span></td> <td class="num col-sm text-slate-700">2</td> <td class="col-md text-slate-700">Nov 11</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-red"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg> Critical </span> </span> </td> </tr>
+                            <tr data-id="ING-04"> <th scope="row">Bangus (milkfish)<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">18.4<span class="cell-sub sm:hidden">reorder at 5</span></td> <td class="num col-sm text-slate-700">5</td> <td class="col-md font-semibold tone-amber">Nov 7<span class="block text-[13px] font-normal">tomorrow</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-13"> <th scope="row">Cabbage<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">7.7<span class="cell-sub sm:hidden">reorder at 2</span></td> <td class="num col-sm text-slate-700">2</td> <td class="col-md font-semibold tone-amber">Nov 8<span class="block text-[13px] font-normal">in 2 days</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-07"> <th scope="row">Fresh milk<span class="cell-sub sm:hidden">L</span></th> <td class="col-sm text-slate-700">L</td> <td class="num font-medium text-slate-900">25.7<span class="cell-sub sm:hidden">reorder at 11</span></td> <td class="num col-sm text-slate-700">11</td> <td class="col-md font-semibold tone-amber">Nov 8<span class="block text-[13px] font-normal">in 2 days</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-03"> <th scope="row">Ground beef<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">49.4<span class="cell-sub sm:hidden">reorder at 12</span></td> <td class="num col-sm text-slate-700">12</td> <td class="col-md font-semibold tone-amber">Nov 8<span class="block text-[13px] font-normal">in 2 days</span></td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-amber"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Near-Expiry </span> </span> </td> </tr>
+                            <tr data-id="ING-16"> <th scope="row">All-purpose flour<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">10.8<span class="cell-sub sm:hidden">reorder at 4</span></td> <td class="num col-sm text-slate-700">4</td> <td class="col-md text-slate-700">May 2, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-25"> <th scope="row">Bottled water (500 ml)<span class="cell-sub sm:hidden">bottles</span></th> <td class="col-sm text-slate-700">bottles</td> <td class="num font-medium text-slate-900">92<span class="cell-sub sm:hidden">reorder at 48</span></td> <td class="num col-sm text-slate-700">48</td> <td class="col-md text-slate-700">Nov 3, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-08"> <th scope="row">Butter<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">1.9<span class="cell-sub sm:hidden">reorder at 1</span></td> <td class="num col-sm text-slate-700">1</td> <td class="col-md text-slate-700">Jan 2, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-09"> <th scope="row">Cheese<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">4.6<span class="cell-sub sm:hidden">reorder at 2.5</span></td> <td class="num col-sm text-slate-700">2.5</td> <td class="col-md text-slate-700">Dec 18</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-23"> <th scope="row">Coffee beans<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">3.3<span class="cell-sub sm:hidden">reorder at 1.5</span></td> <td class="num col-sm text-slate-700">1.5</td> <td class="col-md text-slate-700">May 2, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-24"> <th scope="row">Cola (355 ml bottle)<span class="cell-sub sm:hidden">bottles</span></th> <td class="col-sm text-slate-700">bottles</td> <td class="num font-medium text-slate-900">133<span class="cell-sub sm:hidden">reorder at 66</span></td> <td class="num col-sm text-slate-700">66</td> <td class="col-md text-slate-700">Jul 1, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-11"> <th scope="row">Garlic<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">6.8<span class="cell-sub sm:hidden">reorder at 2</span></td> <td class="num col-sm text-slate-700">2</td> <td class="col-md text-slate-700">Dec 18</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-10"> <th scope="row">Onion<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">18.3<span class="cell-sub sm:hidden">reorder at 5</span></td> <td class="num col-sm text-slate-700">5</td> <td class="col-md text-slate-700">Dec 3</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-17"> <th scope="row">Pancit canton noodles<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">14.6<span class="cell-sub sm:hidden">reorder at 5</span></td> <td class="num col-sm text-slate-700">5</td> <td class="col-md text-slate-700">May 2, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-02"> <th scope="row">Pork belly<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">28.4<span class="cell-sub sm:hidden">reorder at 7.5</span></td> <td class="num col-sm text-slate-700">7.5</td> <td class="col-md text-slate-700">Nov 17</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-14"> <th scope="row">Potato<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">57<span class="cell-sub sm:hidden">reorder at 15</span></td> <td class="num col-sm text-slate-700">15</td> <td class="col-md text-slate-700">Nov 24</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-15"> <th scope="row">Rice<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">183<span class="cell-sub sm:hidden">reorder at 65</span></td> <td class="num col-sm text-slate-700">65</td> <td class="col-md text-slate-700">May 2, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-21"> <th scope="row">Salt<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">1<span class="cell-sub sm:hidden">reorder at 0.5</span></td> <td class="num col-sm text-slate-700">0.5</td> <td class="col-md text-slate-700">Apr 26, 2028</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-19"> <th scope="row">Soy sauce<span class="cell-sub sm:hidden">L</span></th> <td class="col-sm text-slate-700">L</td> <td class="num font-medium text-slate-900">11.7<span class="cell-sub sm:hidden">reorder at 4</span></td> <td class="num col-sm text-slate-700">4</td> <td class="col-md text-slate-700">Nov 3, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-22"> <th scope="row">Sugar<span class="cell-sub sm:hidden">kg</span></th> <td class="col-sm text-slate-700">kg</td> <td class="num font-medium text-slate-900">5.5<span class="cell-sub sm:hidden">reorder at 2</span></td> <td class="num col-sm text-slate-700">2</td> <td class="col-md text-slate-700">Nov 3, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                            <tr data-id="ING-20"> <th scope="row">Vinegar<span class="cell-sub sm:hidden">L</span></th> <td class="col-sm text-slate-700">L</td> <td class="num font-medium text-slate-900">7.3<span class="cell-sub sm:hidden">reorder at 2.5</span></td> <td class="num col-sm text-slate-700">2.5</td> <td class="col-md text-slate-700">Nov 3, 2027</td> <td> <span class="flex flex-wrap gap-1"> <span class="badge badge-slate"> <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> OK </span> </span> </td> </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p class="hint-3">Showing 25 of 25 ingredients — scroll the table for more.</p>
+                    </div>
+                    <p class="mt-2">
+                      <a href="inventory.html" class="inline-flex min-h-[44px] items-center gap-1 text-sm link">
+                        Open inventory
+                        <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      </a>
+                    </p>
+                  </div>
+                </section>
+              </div>
+              <div class="min-w-0 xl:col-span-4">
+                <!-- Section: Suggested Purchase Quantities -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="suggested-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="suggested-title" class="card-title">Suggested Purchase Quantities</h2>
+                      <p class="mt-0.5 text-[13px] text-slate-600">Next 7 days (Nov 7–Nov 13) · based on the last 7 days of dish sales</p>
+                    </div>
+                    <div class="shrink-0">
+                      <span class="tip tip-right">
+                        <button type="button" class="tip-btn" aria-label="How suggested quantities are calculated" aria-describedby="tip-1" aria-expanded="false">
+                          <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        </button>
+                        <span role="tooltip" id="tip-1" class="tip-body"><strong>Purchase Quantity</strong> = Forecast Demand + Safety Stock − Usable Stock − Incoming Stock. Never below zero. Safety stock = 1 day of forecast usage. Listed when usable stock is at or below the reorder level.</span>
+                      </span>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body">
+                    <ul class="divide-y divide-slate-100">
+                      <!-- Backend: one row for each of the suggestions (replenishment rows). Source: computed values from ingredient + recipe + order_item. Rule: forecast = average daily use of the last 7 complete days × forecast days; to_buy = forecast + 1 day safety stock − usable_stock − incoming quantity on open purchase orders (never below 0); cost = to_buy × cheapest supplier_items.unit_price. -->
+                      <li class="py-3 first:pt-0" data-id="ING-05">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="min-w-0">
+                            <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                              Shrimp
+                              <span class="badge badge-out">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                                Out
+                              </span>
+                            </p>
+                            <p class="mt-1 text-[13px] font-semibold tone-out"><svg width="13" height="13" viewBox="0 0 24 24" class="i shrink-0 mr-1 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Out of stock · delivery in 1 day</p>
+                            <p class="text-[13px] text-slate-600">Blue Harbor Seafood</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <p class="tabular font-semibold text-slate-900">4 kg</p>
+                            <p class="tabular text-[13px] text-slate-600">₱1,680</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="ING-12">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="min-w-0">
+                            <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                              Tomato
+                              <span class="badge badge-amber">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                Low
+                              </span>
+                            </p>
+                            <p class="mt-1 text-[13px] font-semibold tone-red"><svg width="13" height="13" viewBox="0 0 24 24" class="i shrink-0 mr-1 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Lasts about 0.8 days · delivery in 1 day</p>
+                            <p class="text-[13px] text-slate-600">Green Valley Produce</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <p class="tabular font-semibold text-slate-900">6 kg</p>
+                            <p class="tabular text-[13px] text-slate-600">₱420</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="ING-06">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="min-w-0">
+                            <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                              Eggs
+                              <span class="badge badge-amber">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                Low
+                              </span>
+                            </p>
+                            <p class="mt-1 text-[13px] font-semibold tone-red"><svg width="13" height="13" viewBox="0 0 24 24" class="i shrink-0 mr-1 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Lasts about 0.9 days · delivery in 1 day</p>
+                            <p class="text-[13px] text-slate-600">Green Valley Produce</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <p class="tabular font-semibold text-slate-900">21 tray (30 pcs)</p>
+                            <p class="tabular text-[13px] text-slate-600">₱5,544</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="ING-01">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="min-w-0">
+                            <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                              Chicken breast
+                              <span class="badge badge-amber">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                Low
+                              </span>
+                            </p>
+                            <p class="mt-1 text-[13px] text-slate-600">Lasts about 1.2 days · delivery in 1 day</p>
+                            <p class="text-[13px] text-slate-600">Mercado Fresh Meats</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <p class="tabular font-semibold text-slate-900">56 kg</p>
+                            <p class="tabular text-[13px] text-slate-600">₱12,040</p>
+                          </div>
+                        </div>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="ING-18">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="min-w-0">
+                            <p class="flex flex-wrap items-center gap-2 font-medium text-slate-900">
+                              Cooking oil
+                              <span class="badge badge-amber">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                Low
+                              </span>
+                            </p>
+                            <p class="mt-1 text-[13px] font-semibold tone-red"><svg width="13" height="13" viewBox="0 0 24 24" class="i shrink-0 mr-1 inline align-[-2px]" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Lasts about 1.5 days · delivery in 2 days</p>
+                            <p class="text-[13px] text-slate-600">Golden Grain Trading</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <p class="tabular font-semibold text-slate-900">5 L</p>
+                            <p class="tabular text-[13px] text-slate-600">₱490</p>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <p class="mt-1 text-[13px]">
+                      <a class="link" href="demand.html">See the full 7-day forecast</a>
+                    </p>
+                    <div class="mt-4 border-t border-slate-200 pt-3">
+                      <div class="flex items-baseline justify-between gap-3 text-sm">
+                        <span class="text-slate-700">5 items to order · estimated total</span>
+                        <span class="tabular text-base font-semibold text-slate-900">₱20,174</span>
+                      </div>
+                      <a href="procurement.html" class="btn btn-primary mt-3 w-full">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Create Purchase Order (5)
+                      </a>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+            <div class="mt-4 grid items-start gap-4 md:mt-6 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
+              <div class="min-w-0">
+                <!-- Section: Pending Purchase Orders -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="pending-po-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="pending-po-title" class="card-title">Pending Purchase Orders</h2>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body">
+                    <ul class="divide-y divide-slate-100">
+                      <!-- Backend: one row for each of the pending pos. Source: purchase_order (status draft, sent, partial). Rule: total = SUM(purchase_order_items.quantity × unit_cost); overdue when expected date < today and not fully received. -->
+                      <li class="py-3 first:pt-0" data-id="PO-2026-0033">
+                        <a href="purchase-order-detail.html?id=PO-2026-0033" class="flex items-start justify-between gap-3 rounded hover:bg-slate-50">
+                          <div class="min-w-0">
+                            <p class="font-medium text-slate-900">PO-2026-0033</p>
+                            <p class="truncate text-[13px] text-slate-600">Golden Grain Trading</p>
+                            <p class="mt-1 text-[13px] text-slate-600">Not sent yet</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <span class="badge badge-slate">
+                              <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                              Draft
+                            </span>
+                            <p class="tabular mt-1 strong-sm">₱2,400</p>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="PO-2026-0032">
+                        <a href="purchase-order-detail.html?id=PO-2026-0032" class="flex items-start justify-between gap-3 rounded hover:bg-slate-50">
+                          <div class="min-w-0">
+                            <p class="font-medium text-slate-900">PO-2026-0032</p>
+                            <p class="truncate text-[13px] text-slate-600">Mercado Fresh Meats</p>
+                            <p class="mt-1 text-[13px] text-slate-600">Expected Nov 7</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <span class="badge badge-blue">
+                              <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                              Sent
+                            </span>
+                            <p class="tabular mt-1 strong-sm">₱8,750</p>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="PO-2026-0031">
+                        <a href="purchase-order-detail.html?id=PO-2026-0031" class="flex items-start justify-between gap-3 rounded hover:bg-slate-50">
+                          <div class="min-w-0">
+                            <p class="font-medium text-slate-900">PO-2026-0031</p>
+                            <p class="truncate text-[13px] text-slate-600">Golden Grain Trading</p>
+                            <p class="mt-1 text-[13px] text-slate-600">Expected Nov 7</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <span class="badge badge-blue">
+                              <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                              Sent
+                            </span>
+                            <p class="tabular mt-1 strong-sm">₱3,690</p>
+                          </div>
+                        </a>
+                      </li>
+                      <li class="py-3 first:pt-0" data-id="PO-2026-0030">
+                        <a href="purchase-order-detail.html?id=PO-2026-0030" class="flex items-start justify-between gap-3 rounded hover:bg-slate-50">
+                          <div class="min-w-0">
+                            <p class="font-medium text-slate-900">PO-2026-0030</p>
+                            <p class="truncate text-[13px] text-slate-600">Metro Beverage &amp; Dairy Distributors</p>
+                            <p class="mt-1 text-[13px] font-semibold tone-amber"><svg width="13" height="13" viewBox="0 0 24 24" class="i shrink-0 mr-1 inline align-[-2px]" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Overdue · was due Nov 5</p>
+                          </div>
+                          <div class="shrink-0 text-right">
+                            <span class="badge badge-amber">
+                              <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                              Partially received
+                            </span>
+                            <p class="tabular mt-1 strong-sm">₱5,188</p>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                    <p class="mt-1 flex flex-wrap items-baseline justify-between gap-2 border-t border-slate-200 pt-3 text-sm">
+                      <span class="text-slate-700">4 pending</span>
+                      <span class="tabular font-semibold text-slate-900">₱20,028</span>
+                    </p>
+                    <p class="mt-1">
+                      <a href="procurement.html" class="inline-flex min-h-[44px] items-center gap-1 text-sm link">
+                        Open procurement
+                        <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      </a>
+                    </p>
+                  </div>
+                </section>
+              </div>
+              <div class="min-w-0">
+                <!-- Section: Near-Expiry and Wastage -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="expiry-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="expiry-title" class="card-title">Near-Expiry and Wastage</h2>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body">
+                    <ul class="divide-y divide-slate-100">
+                      <!-- Backend: one row for each of the near expiry. Source: inventory_batch + ingredient. Rule: days_left = expiry_date − today; value_at_risk = current_quantity × latest unit_cost of that ingredient; listed when days_left <= the near-expiry window. -->
+                      <li class="flex items-start justify-between gap-3 py-3 first:pt-0" data-id="ING-04">
+                        <div class="min-w-0">
+                          <p class="truncate font-medium text-slate-900">Bangus (milkfish)</p>
+                          <p class="text-[13px] text-slate-600">3.7 kg · Nov 7 · ₱703</p>
+                        </div>
+                        <span class="badge badge-amber">
+                          <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Expires tomorrow
+                        </span>
+                      </li>
+                      <li class="flex items-start justify-between gap-3 py-3 first:pt-0" data-id="ING-03">
+                        <div class="min-w-0">
+                          <p class="truncate font-medium text-slate-900">Ground beef</p>
+                          <p class="text-[13px] text-slate-600">9.9 kg · Nov 8 · ₱3,762</p>
+                        </div>
+                        <span class="badge badge-amber">
+                          <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Expires in 2 days
+                        </span>
+                      </li>
+                      <li class="flex items-start justify-between gap-3 py-3 first:pt-0" data-id="ING-07">
+                        <div class="min-w-0">
+                          <p class="truncate font-medium text-slate-900">Fresh milk</p>
+                          <p class="text-[13px] text-slate-600">5.1 L · Nov 8 · ₱485</p>
+                        </div>
+                        <span class="badge badge-amber">
+                          <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Expires in 2 days
+                        </span>
+                      </li>
+                      <li class="flex items-start justify-between gap-3 py-3 first:pt-0" data-id="ING-13">
+                        <div class="min-w-0">
+                          <p class="truncate font-medium text-slate-900">Cabbage</p>
+                          <p class="text-[13px] text-slate-600">1.5 kg · Nov 8 · ₱90</p>
+                        </div>
+                        <span class="badge badge-amber">
+                          <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Expires in 2 days
+                        </span>
+                      </li>
+                    </ul>
+                    <p class="mt-2 row-between gap-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                      <span class="flex items-center gap-1.5">
+                        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                        Potential loss at risk
+                      </span>
+                      <span class="tabular font-semibold">₱5,040</span>
+                    </p>
+                    <div class="mt-4 border-t border-slate-200 pt-3">
+                      <p class="label-sm">Wastage · last 30 days</p>
+                      <p class="mt-1 flex items-baseline gap-2">
+                        <span class="kpi-value !text-2xl !leading-8">₱1,567</span>
+                        <span class="text-sm text-slate-600">14 entries</span>
+                      </p>
+                      <ul class="mt-2 space-y-1 text-sm text-slate-700">
+                        <li class="flex justify-between gap-3" data-id="ING-01">
+                          <span class="truncate">Chicken breast</span>
+                          <span class="tabular shrink-0">1.7 kg · ₱366</span>
+                        </li>
+                        <li class="flex justify-between gap-3" data-id="ING-04">
+                          <span class="truncate">Bangus (milkfish)</span>
+                          <span class="tabular shrink-0">1.8 kg · ₱342</span>
+                        </li>
+                        <li class="flex justify-between gap-3" data-id="ING-03">
+                          <span class="truncate">Ground beef</span>
+                          <span class="tabular shrink-0">0.8 kg · ₱304</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <div class="min-w-0 md:col-span-2 xl:col-span-1">
+                <!-- Section: Purchase History and Spending Summary -->
+                <section class="card flex min-w-0 flex-col" aria-labelledby="spending-title">
+                  <header class="card-head gap-y-2">
+                    <div class="head-text">
+                      <h2 id="spending-title" class="card-title">Purchase History and Spending Summary</h2>
+                    </div>
+                  </header>
+                  <div class="flex min-h-0 flex-1 flex-col card-body">
+                    <p class="flex flex-wrap items-baseline gap-2">
+                      <span class="kpi-value">₱298,028</span>
+                      <span class="text-sm text-slate-600">last 4 weeks · 29 receipts</span>
+                    </p>
+                    <!-- CHART DATA — Weekly purchase spending (₱), last 4 weeks Week of Oct 10 · ₱89,588 Week of Oct 17 · ₱81,476 Week of Oct 24 · ₱60,889 Week of Oct 31 · ₱66,075 Edit the numbers here and the matching points/bars in the SVG (the data-tip text on each hit area is its tooltip), or let the backend draw the chart. -->
+                    <div class="chart mx-auto mt-3 max-w-[360px]" tabindex="0" role="group" aria-label="Weekly purchase spending, last 4 weeks. Use the arrow keys to read each value, Escape to close.">
+                      <svg viewBox="0 0 307 160" role="img" aria-label="Weekly purchase spending, last 4 weeks. Week of Oct 10 ₱89,588, Week of Oct 17 ₱81,476, Week of Oct 24 ₱60,889, Week of Oct 31 ₱66,075." class="fill-w">
+  <line class="axis" x1="48" x2="299" y1="136" y2="136"/><text x="40" y="140" text-anchor="end">₱0</text>
+  <line class="grid" x1="48" x2="299" y1="104" y2="104"/><text x="40" y="108" text-anchor="end">₱25K</text>
+  <line class="grid" x1="48" x2="299" y1="72" y2="72"/><text x="40" y="76" text-anchor="end">₱50K</text>
+  <line class="grid" x1="48" x2="299" y1="40" y2="40"/><text x="40" y="44" text-anchor="end">₱75K</text>
+  <line class="grid" x1="48" x2="299" y1="8" y2="8"/><text x="40" y="12" text-anchor="end">₱100K</text><text x="79.4" y="154" text-anchor="middle">Oct 10</text><text x="142.1" y="154" text-anchor="middle">Oct 17</text>
+  <text x="204.9" y="154" text-anchor="middle">Oct 24</text>
+  <text x="267.6" y="154" text-anchor="middle">Oct 31</text>
+  <g class="pt"><rect class="bar" x="59.9" y="21.3" width="38.9" height="114.7" rx="3"/><rect class="hit" x="48.0" y="8" width="62.8" height="128" data-tip="Week of Oct 10 · ₱89,588"/></g>
+  <g class="pt"><rect class="bar" x="122.7" y="31.7" width="38.9" height="104.3" rx="3"/><rect class="hit" x="110.8" y="8" width="62.8" height="128" data-tip="Week of Oct 17 · ₱81,476"/></g>
+  <g class="pt"><rect class="bar" x="185.4" y="58.1" width="38.9" height="77.9" rx="3"/><rect class="hit" x="173.5" y="8" width="62.8" height="128" data-tip="Week of Oct 24 · ₱60,889"/></g>
+  <g class="pt"><rect class="bar" x="248.2" y="51.4" width="38.9" height="84.6" rx="3"/><rect class="hit" x="236.3" y="8" width="62.8" height="128" data-tip="Week of Oct 31 · ₱66,075"/></g>
+                      </svg>
+                      <div class="chart-tip" role="status" hidden></div>
+                    </div>
+                    <div class="sr-only">
+                      <table>
+                        <caption>Weekly purchase spending, last 4 weeks</caption>
+                        <thead>
+                          <tr><th scope="col">Week</th><th scope="col">Spend</th></tr>
+                        </thead>
+                        <tbody>
+                          <tr><th scope="row">Week of Oct 10</th><td>₱89,588</td></tr>
+                          <tr><th scope="row">Week of Oct 17</th><td>₱81,476</td></tr>
+                          <tr><th scope="row">Week of Oct 24</th><td>₱60,889</td></tr>
+                          <tr><th scope="row">Week of Oct 31</th><td>₱66,075</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p class="mt-2 text-sm text-slate-700">Top supplier: <span class="font-semibold text-slate-900">Mercado Fresh Meats</span> (₱130,635)</p>
+                    <ul class="mt-3 divide-y divide-slate-100 border-t border-slate-200 text-sm">
+                      <!-- Backend: one row for each of the recent receipts. Source: purchase_order (received_date not null). Rule: received value = SUM(received quantity × unit_cost paid). -->
+                      <li class="flex justify-between gap-3 py-2" data-id="PO-2026-0030">
+                        <span class="min-w-0 truncate">
+                          <span class="font-medium text-slate-900">PO-2026-0030</span>
+                          <span class="text-slate-600">· Metro Beverage &amp; Dairy Distributors</span>
+                        </span>
+                        <span class="tabular shrink-0 text-slate-700">₱3,564</span>
+                      </li>
+                      <li class="flex justify-between gap-3 py-2" data-id="PO-2026-0029">
+                        <span class="min-w-0 truncate">
+                          <span class="font-medium text-slate-900">PO-2026-0029</span>
+                          <span class="text-slate-600">· Green Valley Produce</span>
+                        </span>
+                        <span class="tabular shrink-0 text-slate-700">₱5,386</span>
+                      </li>
+                      <li class="flex justify-between gap-3 py-2" data-id="PO-2026-0028">
+                        <span class="min-w-0 truncate">
+                          <span class="font-medium text-slate-900">PO-2026-0028</span>
+                          <span class="text-slate-600">· Mercado Fresh Meats</span>
+                        </span>
+                        <span class="tabular shrink-0 text-slate-700">₱18,416</span>
+                      </li>
+                    </ul>
+                  </div>
+                </section>
+              </div>
+            </div>
+            <p class="mt-6">
+              <a href="reports.html" class="inline-flex min-h-[44px] items-center gap-1 text-sm link">
+                View all reports
+                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
+  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
+
+  </div>
+
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/session.js"></script>
+  <script src="assets/js/dialogs.js"></script>
+  <script src="assets/js/charts.js"></script>
+</body>
+</html>

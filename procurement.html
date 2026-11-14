@@ -1,0 +1,688 @@
+<!doctype html>
+<!--
+  PAGE: Procurement (procurement.html)
+  FOR: Administrator, Procurement Officer.
+  PURPOSE: Suggested purchases grouped by supplier: tick the rows and create draft purchase orders.
+  SECTIONS: Suggested purchase list · Already covered by an incoming order · Create purchase order.
+  SCRIPTS: shell, session, dialogs, forms, rows (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+-->
+<html lang="en" class="h-full" data-page-roles="admin procurement">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Procurement · Ace Bistro SCM</title>
+  <meta name="description" content="Ace Bistro Supply Chain Management System.">
+  <meta name="theme-color" content="#15803D">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
+       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
+       The backend replaces it with a server-side check. -->
+  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
+  if(!u||!u.role){location.replace('login.html');return}
+  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
+  d.setAttribute('data-role',u.role)})()</script>
+
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <noscript><style>html body { visibility: visible !important; }</style></noscript>
+</head>
+<body class="h-full bg-page font-sans text-slate-800 antialiased">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div id="app" class="min-h-full lg:flex">
+    <!-- Mobile drawer overlay -->
+    <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
+
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+          <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="leading-tight">
+            <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
+            <span class="cell-xs">Supply Chain Management</span>
+          </span>
+        </a>
+        <button type="button" data-drawer-close class="btn btn-ghost btn-sm ml-auto !px-2 lg:hidden" aria-label="Close menu"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav aria-label="Main" class="scroll-thin flex-1 overflow-y-auto p-3">
+        <ul class="space-y-1">
+          <li data-roles="admin"><a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+          <li data-roles="admin cashier"><a href="orders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg><span>Order Records</span></a></li>
+          <li data-roles="admin cashier kitchen"><a href="menu.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span>Menu &amp; Recipes</span></a></li>
+          <li data-roles="admin kitchen inventory procurement"><a href="inventory.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Inventory</span></a></li>
+          <li data-roles="admin procurement"><a href="suppliers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg><span>Suppliers</span></a></li>
+          <li data-roles="admin procurement"><a href="procurement.html" aria-current="page" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Procurement</span></a></li>
+          <li data-roles="inventory"><a href="receiving.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Receiving</span></a></li>
+          <li data-roles="admin procurement"><a href="demand.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>Demand Estimation</span></a></li>
+          <li data-roles="admin inventory procurement"><a href="reports.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Reports</span></a></li>
+          <li data-roles="admin"><a href="user-accounts.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>User Management</span></a></li>
+          <li data-roles="admin"><a href="settings.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- END SHARED: sidebar -->
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
+      <header id="topbar" class="no-print app-topbar">
+        <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+          <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="hidden strong-sm xs:inline">Ace Bistro</span>
+        </a>
+        <div class="ml-auto flex items-center gap-1 sm:gap-2">
+          <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+          <div class="relative" data-roles="admin kitchen inventory procurement">
+            <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="hidden sm:inline">Alerts</span>
+              <span data-roles="admin inventory procurement" class="alert-count" aria-label="13 alerts">13</span>
+              <span data-roles="kitchen" class="alert-count" aria-label="9 alerts">9</span>
+            </button>
+            <div id="alerts-panel" class="popover hidden absolute right-0 top-full z-30 mt-2 w-[min(92vw,380px)]" role="region" aria-label="Alerts">
+              <div class="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+                <p class="px-4 py-3 strong-sm">Needs attention</p>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Low stock <span class="badge badge-amber">5</span></h3>
+                  <a href="inventory.html?status=below" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=out" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Shrimp</span><span class="note-block">Out of stock</span></span>
+                    <span class="badge badge-out shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Out</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Tomato</span><span class="note-block">0.6 kg left · reorder at 2</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Eggs</span><span class="note-block">2.5 tray (30 pcs) left · reorder at 7</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 2 more</p>
+              </div>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Near expiry <span class="badge badge-amber">4</span></h3>
+                  <a href="inventory.html?status=near" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Bangus (milkfish)</span><span class="note-block">3.7 kg · expires tomorrow</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Ground beef</span><span class="note-block">9.9 kg · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Fresh milk</span><span class="note-block">5.1 L · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="admin procurement">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending purchase orders <span class="badge badge-blue">4</span></h3>
+                  <a href="purchase-orders.html?status=pending" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="purchase-orders.html?status=draft" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="inventory">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending deliveries <span class="badge badge-blue">4</span></h3>
+                  <a href="receiving.html" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <div class="relative">
+            <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+              <span class="sr-only">Account menu</span>
+              <span class="user-chip" data-user-chip>
+                <span class="avatar" aria-hidden="true" data-user-initials></span>
+                <span class="hidden text-left leading-tight sm:block">
+                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
+                  <span class="cell-xs" data-user-role></span>
+                </span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
+              <div class="border-b border-slate-100 px-4 py-3">
+                <p class="strong-sm" data-user-name></p>
+                <p class="text-[13px] text-slate-600" data-user-role></p>
+              </div>
+              <ul class="p-1">
+                <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
+                <li><button type="button" data-dialog-open="logout-dialog" class="menu-item w-full text-left"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Log out</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+      <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
+        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+        <div class="modal-foot">
+          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+          <button type="button" data-logout class="btn btn-primary">Log out</button>
+        </div>
+      </dialog>
+      <!-- END SHARED: topbar -->
+
+      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
+      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
+        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
+        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
+        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      </div>
+      <!-- END SHARED: flash -->
+
+      <main id="main" tabindex="-1" class="min-w-0 flex-1 outline-none">
+        <div class="page-wrap">
+          <div>
+            <div class="page-head">
+              <div>
+                <h1 class="page-title">Procurement</h1>
+                <p class="page-lead">Suggested purchases grouped by supplier: tick the rows and create draft purchase orders.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" data-dialog-open="dlg-create-po" data-roles="admin procurement" class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  Create purchase order
+                </button>
+              </div>
+            </div>
+            <nav aria-label="Procurement sections" class="mt-4 flex flex-wrap gap-2">
+              <a href="procurement.html" data-roles="admin procurement" aria-current="page" class="inline-flex min-h-[44px] items-center rounded-md border px-4 text-sm font-semibold border-green-200 bg-brand-tint text-brand-dark">
+                Purchase list
+              </a>
+              <a href="purchase-orders.html" data-roles="admin procurement" class="inline-flex min-h-[44px] items-center rounded-md border px-4 text-sm font-semibold border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+                Purchase orders
+              </a>
+              <a href="receiving.html" data-roles="admin procurement inventory" class="inline-flex min-h-[44px] items-center rounded-md border px-4 text-sm font-semibold border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+                Receiving
+              </a>
+            </nav>
+            <!-- SUMMARY RULES: Urgent / soon and Estimated cost come from the suggested list rows below: cost = SUM(suggested quantity × latest unit cost) = ₱20,174 (same as the Dashboard and Demand Estimation); Suppliers = distinct preferred suppliers on the list (one draft purchase order each). Pending purchase orders = status draft, sent or partial (Purchase Orders page). -->
+            <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Items to buy</p>
+                <p class="kpi-value mt-1">5</p>
+                <p class="page-lead">4 urgent, 1 soon</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Estimated cost</p>
+                <p class="kpi-value mt-1">₱20,174</p>
+                <p class="page-lead">same total as the Dashboard and Demand Estimation</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Suppliers</p>
+                <p class="kpi-value mt-1">4</p>
+                <p class="page-lead">one purchase order each</p>
+              </div>
+              <a href="purchase-orders.html" class="card block p-4 transition-shadow hover:shadow-md md:p-6">
+                <p class="label-sm">Pending purchase orders</p>
+                <p class="kpi-value mt-1">4</p>
+                <p class="page-lead">₱20,028 · 1 overdue</p>
+              </a>
+            </div>
+            <form id="procurement-form-1" data-calc-group method="post" action="procurement.html" data-local-save data-toast-open="toast-po-created" class="mt-6">
+              <!-- Section: Suggested purchase list -->
+              <section class="card min-w-0" aria-labelledby="list-title">
+                <header class="card-head gap-y-2">
+                  <div class="head-text">
+                    <h2 id="list-title" class="card-title">Suggested purchase list</h2>
+                  </div>
+                </header>
+                <div class="space-y-4 card-body">
+                  <p class="text-sm text-slate-700">Purchase quantity = forecast demand + safety stock − usable stock − incoming stock, never below zero. Untick an item to leave it out, or change the quantity; the estimated cost is quantity × the supplier's latest price.</p>
+                  <!-- Backend: one row for each of the suppliers with suggestions (largest total first); the first group is the template Source: computed values from suggestions grouped by supplier. Rule: group total = SUM(line totals); groups are ordered by total, largest first. -->
+                  <section class="rounded-lg border border-slate-200" aria-labelledby="grp-SUP-01" data-id="SUP-01" data-calc-section>
+                    <header class="row-between flex-wrap gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <div>
+                        <h3 id="grp-SUP-01" class="text-base font-semibold text-slate-900">
+                          <a href="supplier-detail.html?id=SUP-01" class="link">Mercado Fresh Meats</a>
+                        </h3>
+                        <p class="text-[13px] text-slate-700">Rudy Alcantara · lead time 1 day · expected Nov 7 if ordered today</p>
+                      </div>
+                      <p class="text-sm text-slate-700"><span data-calc-subcount>1 item</span> · <span class="font-semibold tabular text-slate-900" data-calc-subtotal>₱12,040</span></p>
+                    </header>
+                    <div class="scroll-thin overflow-x-auto" tabindex="0" role="region" aria-label="Suggested items from Mercado Fresh Meats, scrollable">
+                      <table class="table min-w-[32rem]">
+                        <caption class="sr-only">Suggested items from Mercado Fresh Meats</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              <span class="sr-only">Include</span>
+                            </th>
+                            <th scope="col">Ingredient</th>
+                            <th scope="col" class="col-md">Already incoming</th>
+                            <th scope="col" class="num">Quantity</th>
+                            <th scope="col" class="num col-sm">Unit cost</th>
+                            <th scope="col" class="num">Est. cost</th>
+                            <th scope="col">Priority</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Backend: one row for each of the items (suggested items of this supplier). Source: ingredient + supplier_item (latest price per supplier) + inventory_batch (usable stock) + purchase_order_item (incoming), grouped by preferred_supplier_id. Rule: line total = quantity × unit_cost; the supplier subtotal and the Ticked total count only ticked rows (the backend recalculates on the server). -->
+                          <tr data-id="ING-01" data-calc-row data-unit-price="215">
+                            <td class="w-10">
+                              <label class="-m-3 flex h-11 w-11 cursor-pointer items-center justify-center"><input type="checkbox" data-calc-include name="ingredient_id[]" value="ING-01" checked class="h-5 w-5 accent-[#15803D]" aria-label="Include Chicken breast in the purchase order"></label>
+                            </td>
+                            <th scope="row">
+                              <span class="block">Chicken breast</span>
+                              <span class="block text-[13px] font-normal text-slate-700">9.7 kg · 1.2 days left</span>
+                            </th>
+                            <td class="col-md text-sm">
+                              <span class="text-slate-600">None</span>
+                            </td>
+                            <td class="num">
+                              <label class="sr-only" for="qty-ING-01">Quantity to order, kg</label>
+                              <input id="qty-ING-01" name="quantity[]" type="number" data-calc-qty inputmode="decimal" min="0" step="any" value="56" class="input !w-24 text-right tabular" aria-describedby="qty-ING-01-error"><span class="ml-1 text-sm text-slate-700">kg</span>
+                              <p class="field-error" id="qty-ING-01-error" hidden>Enter a quantity of 0 or more.</p>
+                            </td>
+                            <td class="num col-sm">₱215.00<input type="hidden" name="unit_cost[]" value="215"></td>
+                            <td class="num font-semibold text-slate-900" data-calc-line>₱12,040</td>
+                            <td>
+                              <span class="badge badge-amber">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Soon
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <!-- Section: Green Valley Produce Edwin Bautista · lead time 1 day · expected Nov 7 if ordered today 2 items · ₱5,964 Suggested items from Green Valley Produce Include Ingredient Already incoming Quantity Unit cost Est. cost Priority Eggs 2.5 tray · 0.9 days left None Quantity to order, tray tray Enter a quantity of 0 or more. ₱264.00 ₱5,544 Urgent Tomato 0.6 kg · 0.8 days left None Quantity to order, kg kg Enter a quantity of 0 or more. ₱70.00 ₱420 Urgent Blue Harbor Seafood Nena Gatchalian · lead time 1 day · expected Nov 7 if ordered today 1 item · ₱1,680 Suggested items from Blue Harbor Seafood Include Ingredient Already incoming Quantity Unit cost Est. cost Priority Shrimp Out of stock None Quantity to order, kg kg Enter a quantity of 0 or more. ₱420.00 ₱1,680 Urgent Golden Grain Trading Maribel Tan · lead time 2 days · expected Nov 8 if ordered today 1 item · ₱490 Suggested items from Golden Grain Trading Include Ingredient Already incoming Quantity Unit cost Est. cost Priority Cooking oil 8.3 L · 1.5 days left 30 L already on PO-2026-0031 30 L on PO-2026-0031 due Nov 7 · counted in the quantity Quantity to order, L L Enter a quantity of 0 or more. ₱98.00 ₱490 Urgent Ticked: 5 of 5 items · ₱20,174 Create purchase order Already covered by an incoming order -->
+                  <section class="rounded-lg border border-slate-200" aria-labelledby="grp-SUP-03" data-id="SUP-03" data-calc-section>
+                    <header class="row-between flex-wrap gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <div>
+                        <h3 id="grp-SUP-03" class="text-base font-semibold text-slate-900">
+                          <a href="supplier-detail.html?id=SUP-03" class="link">Green Valley Produce</a>
+                        </h3>
+                        <p class="text-[13px] text-slate-700">Edwin Bautista · lead time 1 day · expected Nov 7 if ordered today</p>
+                      </div>
+                      <p class="text-sm text-slate-700"><span data-calc-subcount>2 items</span> · <span class="font-semibold tabular text-slate-900" data-calc-subtotal>₱5,964</span></p>
+                    </header>
+                    <div class="scroll-thin overflow-x-auto" tabindex="0" role="region" aria-label="Suggested items from Green Valley Produce, scrollable">
+                      <table class="table min-w-[32rem]">
+                        <caption class="sr-only">Suggested items from Green Valley Produce</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              <span class="sr-only">Include</span>
+                            </th>
+                            <th scope="col">Ingredient</th>
+                            <th scope="col" class="col-md">Already incoming</th>
+                            <th scope="col" class="num">Quantity</th>
+                            <th scope="col" class="num col-sm">Unit cost</th>
+                            <th scope="col" class="num">Est. cost</th>
+                            <th scope="col">Priority</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Backend: one row for each of the items (suggested items of this supplier). Source: ingredient + supplier_item (latest price per supplier) + inventory_batch (usable stock) + purchase_order_item (incoming), grouped by preferred_supplier_id. Rule: line total = quantity × unit_cost; the supplier subtotal and the Ticked total count only ticked rows (the backend recalculates on the server). -->
+                          <tr data-id="ING-06" data-calc-row data-unit-price="264">
+                            <td class="w-10">
+                              <label class="-m-3 flex h-11 w-11 cursor-pointer items-center justify-center"><input type="checkbox" data-calc-include name="ingredient_id[]" value="ING-06" checked class="h-5 w-5 accent-[#15803D]" aria-label="Include Eggs in the purchase order"></label>
+                            </td>
+                            <th scope="row">
+                              <span class="block">Eggs</span>
+                              <span class="block text-[13px] font-normal text-slate-700">2.5 tray · 0.9 days left</span>
+                            </th>
+                            <td class="col-md text-sm">
+                              <span class="text-slate-600">None</span>
+                            </td>
+                            <td class="num">
+                              <label class="sr-only" for="qty-ING-06">Quantity to order, tray</label>
+                              <input id="qty-ING-06" name="quantity[]" type="number" data-calc-qty inputmode="decimal" min="0" step="any" value="21" class="input !w-24 text-right tabular" aria-describedby="qty-ING-06-error"><span class="ml-1 text-sm text-slate-700">tray</span>
+                              <p class="field-error" id="qty-ING-06-error" hidden>Enter a quantity of 0 or more.</p>
+                            </td>
+                            <td class="num col-sm">₱264.00<input type="hidden" name="unit_cost[]" value="264"></td>
+                            <td class="num font-semibold text-slate-900" data-calc-line>₱5,544</td>
+                            <td>
+                              <span class="badge badge-red">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                Urgent
+                              </span>
+                            </td>
+                          </tr>
+                          <tr data-id="ING-12" data-calc-row data-unit-price="70">
+                            <td class="w-10">
+                              <label class="-m-3 flex h-11 w-11 cursor-pointer items-center justify-center"><input type="checkbox" data-calc-include name="ingredient_id[]" value="ING-12" checked class="h-5 w-5 accent-[#15803D]" aria-label="Include Tomato in the purchase order"></label>
+                            </td>
+                            <th scope="row">
+                              <span class="block">Tomato</span>
+                              <span class="block text-[13px] font-normal text-slate-700">0.6 kg · 0.8 days left</span>
+                            </th>
+                            <td class="col-md text-sm">
+                              <span class="text-slate-600">None</span>
+                            </td>
+                            <td class="num">
+                              <label class="sr-only" for="qty-ING-12">Quantity to order, kg</label>
+                              <input id="qty-ING-12" name="quantity[]" type="number" data-calc-qty inputmode="decimal" min="0" step="any" value="6" class="input !w-24 text-right tabular" aria-describedby="qty-ING-12-error"><span class="ml-1 text-sm text-slate-700">kg</span>
+                              <p class="field-error" id="qty-ING-12-error" hidden>Enter a quantity of 0 or more.</p>
+                            </td>
+                            <td class="num col-sm">₱70.00<input type="hidden" name="unit_cost[]" value="70"></td>
+                            <td class="num font-semibold text-slate-900" data-calc-line>₱420</td>
+                            <td>
+                              <span class="badge badge-red">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                Urgent
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <!-- Section: Blue Harbor Seafood Nena Gatchalian · lead time 1 day · expected Nov 7 if ordered today 1 item · ₱1,680 Suggested items from Blue Harbor Seafood Include Ingredient Already incoming Quantity Unit cost Est. cost Priority Shrimp Out of stock None Quantity to order, kg kg Enter a quantity of 0 or more. ₱420.00 ₱1,680 Urgent Golden Grain Trading Maribel Tan · lead time 2 days · expected Nov 8 if ordered today 1 item · ₱490 Suggested items from Golden Grain Trading Include Ingredient Already incoming Quantity Unit cost Est. cost Priority Cooking oil 8.3 L · 1.5 days left 30 L already on PO-2026-0031 30 L on PO-2026-0031 due Nov 7 · counted in the quantity Quantity to order, L L Enter a quantity of 0 or more. ₱98.00 ₱490 Urgent Ticked: 5 of 5 items · ₱20,174 Create purchase order Already covered by an incoming order -->
+                  <section class="rounded-lg border border-slate-200" aria-labelledby="grp-SUP-02" data-id="SUP-02" data-calc-section>
+                    <header class="row-between flex-wrap gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <div>
+                        <h3 id="grp-SUP-02" class="text-base font-semibold text-slate-900">
+                          <a href="supplier-detail.html?id=SUP-02" class="link">Blue Harbor Seafood</a>
+                        </h3>
+                        <p class="text-[13px] text-slate-700">Nena Gatchalian · lead time 1 day · expected Nov 7 if ordered today</p>
+                      </div>
+                      <p class="text-sm text-slate-700"><span data-calc-subcount>1 item</span> · <span class="font-semibold tabular text-slate-900" data-calc-subtotal>₱1,680</span></p>
+                    </header>
+                    <div class="scroll-thin overflow-x-auto" tabindex="0" role="region" aria-label="Suggested items from Blue Harbor Seafood, scrollable">
+                      <table class="table min-w-[32rem]">
+                        <caption class="sr-only">Suggested items from Blue Harbor Seafood</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              <span class="sr-only">Include</span>
+                            </th>
+                            <th scope="col">Ingredient</th>
+                            <th scope="col" class="col-md">Already incoming</th>
+                            <th scope="col" class="num">Quantity</th>
+                            <th scope="col" class="num col-sm">Unit cost</th>
+                            <th scope="col" class="num">Est. cost</th>
+                            <th scope="col">Priority</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Backend: one row for each of the items (suggested items of this supplier). Source: ingredient + supplier_item (latest price per supplier) + inventory_batch (usable stock) + purchase_order_item (incoming), grouped by preferred_supplier_id. Rule: line total = quantity × unit_cost; the supplier subtotal and the Ticked total count only ticked rows (the backend recalculates on the server). -->
+                          <tr data-id="ING-05" data-calc-row data-unit-price="420">
+                            <td class="w-10">
+                              <label class="-m-3 flex h-11 w-11 cursor-pointer items-center justify-center"><input type="checkbox" data-calc-include name="ingredient_id[]" value="ING-05" checked class="h-5 w-5 accent-[#15803D]" aria-label="Include Shrimp in the purchase order"></label>
+                            </td>
+                            <th scope="row">
+                              <span class="block">Shrimp</span>
+                              <span class="block text-[13px] font-semibold tone-out">Out of stock</span>
+                            </th>
+                            <td class="col-md text-sm">
+                              <span class="text-slate-600">None</span>
+                            </td>
+                            <td class="num">
+                              <label class="sr-only" for="qty-ING-05">Quantity to order, kg</label>
+                              <input id="qty-ING-05" name="quantity[]" type="number" data-calc-qty inputmode="decimal" min="0" step="any" value="4" class="input !w-24 text-right tabular" aria-describedby="qty-ING-05-error"><span class="ml-1 text-sm text-slate-700">kg</span>
+                              <p class="field-error" id="qty-ING-05-error" hidden>Enter a quantity of 0 or more.</p>
+                            </td>
+                            <td class="num col-sm">₱420.00<input type="hidden" name="unit_cost[]" value="420"></td>
+                            <td class="num font-semibold text-slate-900" data-calc-line>₱1,680</td>
+                            <td>
+                              <span class="badge badge-red">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                Urgent
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <!-- Section: Golden Grain Trading Maribel Tan · lead time 2 days · expected Nov 8 if ordered today 1 item · ₱490 Suggested items from Golden Grain Trading Include Ingredient Already incoming Quantity Unit cost Est. cost Priority Cooking oil 8.3 L · 1.5 days left 30 L already on PO-2026-0031 30 L on PO-2026-0031 due Nov 7 · counted in the quantity Quantity to order, L L Enter a quantity of 0 or more. ₱98.00 ₱490 Urgent Ticked: 5 of 5 items · ₱20,174 Create purchase order Already covered by an incoming order -->
+                  <section class="rounded-lg border border-slate-200" aria-labelledby="grp-SUP-04" data-id="SUP-04" data-calc-section>
+                    <header class="row-between flex-wrap gap-x-4 gap-y-1 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <div>
+                        <h3 id="grp-SUP-04" class="text-base font-semibold text-slate-900">
+                          <a href="supplier-detail.html?id=SUP-04" class="link">Golden Grain Trading</a>
+                        </h3>
+                        <p class="text-[13px] text-slate-700">Maribel Tan · lead time 2 days · expected Nov 8 if ordered today</p>
+                      </div>
+                      <p class="text-sm text-slate-700"><span data-calc-subcount>1 item</span> · <span class="font-semibold tabular text-slate-900" data-calc-subtotal>₱490</span></p>
+                    </header>
+                    <div class="scroll-thin overflow-x-auto" tabindex="0" role="region" aria-label="Suggested items from Golden Grain Trading, scrollable">
+                      <table class="table min-w-[32rem]">
+                        <caption class="sr-only">Suggested items from Golden Grain Trading</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              <span class="sr-only">Include</span>
+                            </th>
+                            <th scope="col">Ingredient</th>
+                            <th scope="col" class="col-md">Already incoming</th>
+                            <th scope="col" class="num">Quantity</th>
+                            <th scope="col" class="num col-sm">Unit cost</th>
+                            <th scope="col" class="num">Est. cost</th>
+                            <th scope="col">Priority</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- Backend: one row for each of the items (suggested items of this supplier). Source: ingredient + supplier_item (latest price per supplier) + inventory_batch (usable stock) + purchase_order_item (incoming), grouped by preferred_supplier_id. Rule: line total = quantity × unit_cost; the supplier subtotal and the Ticked total count only ticked rows (the backend recalculates on the server). -->
+                          <tr data-id="ING-18" data-calc-row data-unit-price="98">
+                            <td class="w-10">
+                              <label class="-m-3 flex h-11 w-11 cursor-pointer items-center justify-center"><input type="checkbox" data-calc-include name="ingredient_id[]" value="ING-18" checked class="h-5 w-5 accent-[#15803D]" aria-label="Include Cooking oil in the purchase order"></label>
+                            </td>
+                            <th scope="row">
+                              <span class="block">Cooking oil</span>
+                              <span class="block text-[13px] font-normal text-slate-700">8.3 L · 1.5 days left</span>
+                              <span class="mt-1 block text-[13px] font-normal text-slate-700 md:hidden">30 L already on <a href="purchase-order-detail.html?id=PO-2026-0031" class="link">PO-2026-0031</a></span>
+                            </th>
+                            <td class="col-md text-sm">
+                              <span class="block">30 L on <a href="purchase-order-detail.html?id=PO-2026-0031" class="link">PO-2026-0031</a></span>
+                              <span class="block text-[13px] text-slate-700">due Nov 7 · counted in the quantity</span>
+                            </td>
+                            <td class="num">
+                              <label class="sr-only" for="qty-ING-18">Quantity to order, L</label>
+                              <input id="qty-ING-18" name="quantity[]" type="number" data-calc-qty inputmode="decimal" min="0" step="any" value="5" class="input !w-24 text-right tabular" aria-describedby="qty-ING-18-error"><span class="ml-1 text-sm text-slate-700">L</span>
+                              <p class="field-error" id="qty-ING-18-error" hidden>Enter a quantity of 0 or more.</p>
+                            </td>
+                            <td class="num col-sm">₱98.00<input type="hidden" name="unit_cost[]" value="98"></td>
+                            <td class="num font-semibold text-slate-900" data-calc-line>₱490</td>
+                            <td>
+                              <span class="badge badge-red">
+                                <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                Urgent
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <div class="row-between flex-wrap gap-3 rounded-md bg-slate-50 px-4 py-3">
+                    <p class="text-sm text-slate-700" aria-live="polite">Ticked: <span class="font-semibold text-slate-900" data-calc-count>5 of 5 items</span> · <span class="font-semibold tabular text-slate-900" data-calc-total>₱20,174</span></p>
+                    <button type="button" data-dialog-open="dlg-create-po" data-roles="admin procurement" class="btn btn-primary">
+                      <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                      Create purchase order
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </form>
+            <!-- Section: Already covered by an incoming order -->
+            <section class="card mt-6 min-w-0" aria-labelledby="covered-title">
+              <header class="card-head gap-y-2">
+                <div class="head-text">
+                  <h2 id="covered-title" class="card-title">Already covered by an incoming order</h2>
+                </div>
+              </header>
+              <div class="card-body text-sm text-slate-700">
+                <p>No suggested item is fully covered: every row above still needs a purchase after the incoming orders are counted.</p>
+                <ul class="mt-3 space-y-2">
+                  <li class="flex items-start gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-blue-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <span><strong class="text-slate-900">Cooking oil</strong> is partly covered: 30 L on <a href="purchase-order-detail.html?id=PO-2026-0031" class="link">PO-2026-0031</a> (due Nov 7) is already counted, so only 5 L more is suggested.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-blue-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <span>Draft order <a href="purchase-order-detail.html?id=PO-2026-0033" class="link">PO-2026-0033</a> (Golden Grain Trading, ₱2,400) has not been sent, so it is not counted as incoming.</span>
+                  </li>
+                </ul>
+              </div>
+            </section>
+            <dialog id="dlg-create-po" class="modal modal-lg" aria-labelledby="dlg-create-po-title">
+              <div class="modal-head">
+                <h2 id="dlg-create-po-title" class="title-lg">Create purchase order</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="dlg-create-po-form" method="post" action="procurement.html" data-local-save data-toast-open="toast-po-created">
+                <div class="form-error" role="alert" id="dlg-create-po-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <p class="text-sm text-slate-700">One purchase order goes to one supplier. It is created from the items ticked above for that supplier, starts as <strong>Draft</strong>, and is printed or shared with the supplier by hand. Nothing is sent from this system.</p>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                      <label for="po-supplier" class="label">Supplier</label>
+                      <select id="po-supplier" name="supplier_id" class="input" required aria-describedby="po-supplier-error">
+                        <option value="SUP-01" selected>Mercado Fresh Meats · 1 item · ₱12,040</option>
+                        <option value="SUP-03">Green Valley Produce · 2 items · ₱5,964</option>
+                        <option value="SUP-02">Blue Harbor Seafood · 1 item · ₱1,680</option>
+                        <option value="SUP-04">Golden Grain Trading · 1 item · ₱490</option>
+                      </select>
+                      <p class="field-error" id="po-supplier-error" hidden>Choose a supplier.</p>
+                    </div>
+                    <div>
+                      <label for="po-number" class="label">PO number</label>
+                      <input id="po-number" name="po_id" type="text" class="input" value="PO-2026-0034" readonly>
+                      <p class="field-hint">Assigned automatically.</p>
+                    </div>
+                    <div>
+                      <label for="po-status" class="label">Status</label>
+                      <input id="po-status" name="status" type="text" class="input" value="Draft" readonly>
+                    </div>
+                    <div>
+                      <label for="po-order-date" class="label">Order date</label>
+                      <input id="po-order-date" name="order_date" type="date" value="2026-11-06" class="input" required aria-describedby="po-order-date-error">
+                      <p class="field-error" id="po-order-date-error" hidden>Enter the order date.</p>
+                    </div>
+                    <div>
+                      <label for="po-expected" class="label">Expected delivery</label>
+                      <input id="po-expected" name="expected_date" type="date" value="2026-11-07" class="input" aria-describedby="po-expected-error">
+                      <p class="field-hint">Order date plus the supplier's lead time (1 day).</p>
+                      <p class="field-error" id="po-expected-error" hidden>Enter a valid date.</p>
+                    </div>
+                  </div>
+                  <div class="rounded-md border border-slate-200">
+                    <p class="border-b border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-semibold text-slate-800">Items for Mercado Fresh Meats (the ticked rows)</p>
+                    <table class="table">
+                      <caption class="sr-only">Items on the new purchase order</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Ingredient</th>
+                          <th scope="col" class="num">Quantity</th>
+                          <th scope="col" class="num">Unit cost</th>
+                          <th scope="col" class="num">Line total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr data-id="ING-01">
+                          <th scope="row">Chicken breast</th>
+                          <td class="num">56 kg</td>
+                          <td class="num">₱215.00</td>
+                          <td class="num">₱12,040</td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <th scope="row" colspan="3" class="text-right">Total</th>
+                          <td class="num font-semibold text-slate-900">₱12,040</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  <div>
+                    <label for="po-notes" class="label">Notes for the supplier (optional)</label>
+                    <input id="po-notes" name="notes" type="text" class="input" value="Prepared from the suggested purchase list." maxlength="300" aria-describedby="po-notes-error">
+                    <p class="field-error" id="po-notes-error" hidden>The notes are too long (300 characters at most).</p>
+                  </div>
+                  <input type="hidden" name="created_by" value="USR-06">
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Create draft purchase order
+                  </button>
+                </div>
+              </form>
+            </dialog>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
+  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
+    <div id="toast-po-created" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">Draft purchase order created</p>
+        <p class="mt-0.5 text-sm text-slate-600">One draft order was made for each supplier from the ticked rows.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/session.js"></script>
+  <script src="assets/js/dialogs.js"></script>
+  <script src="assets/js/forms.js"></script>
+  <script src="assets/js/rows.js"></script>
+</body>
+</html>

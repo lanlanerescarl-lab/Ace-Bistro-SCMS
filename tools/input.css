@@ -1,0 +1,4 @@
+/* Input of the Tailwind build. The component classes of the site live in ../assets/css/app.css (loaded before the compiled file). */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,0 +1,636 @@
+<!doctype html>
+<!--
+  PAGE: Purchase History and Spending Summary (report-purchase-history.html)
+  FOR: Administrator, Procurement Officer.
+  PURPOSE: As of Friday, Nov 6, 2026, 11:30 AM · received purchases Oct 10 to Nov 6 (4 weeks)
+  SECTIONS: Purchase spend per day · Spending per week · Latest receipts.
+  REPEATED MARKUP: calendar JSON block(s) (data-cal-data) (each is documented by the comment above its first copy).
+  SCRIPTS: shell, session, dialogs, forms, charts, calendar (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+-->
+<html lang="en" class="h-full" data-page-roles="admin procurement">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Purchase History and Spending Summary · Ace Bistro SCM</title>
+  <meta name="description" content="Ace Bistro Supply Chain Management System.">
+  <meta name="theme-color" content="#15803D">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
+       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
+       The backend replaces it with a server-side check. -->
+  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
+  if(!u||!u.role){location.replace('login.html');return}
+  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
+  d.setAttribute('data-role',u.role)})()</script>
+
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <noscript><style>html body { visibility: visible !important; }</style></noscript>
+</head>
+<body class="h-full bg-page font-sans text-slate-800 antialiased">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div id="app" class="min-h-full lg:flex">
+    <!-- Mobile drawer overlay -->
+    <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
+
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+          <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="leading-tight">
+            <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
+            <span class="cell-xs">Supply Chain Management</span>
+          </span>
+        </a>
+        <button type="button" data-drawer-close class="btn btn-ghost btn-sm ml-auto !px-2 lg:hidden" aria-label="Close menu"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav aria-label="Main" class="scroll-thin flex-1 overflow-y-auto p-3">
+        <ul class="space-y-1">
+          <li data-roles="admin"><a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+          <li data-roles="admin cashier"><a href="orders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg><span>Order Records</span></a></li>
+          <li data-roles="admin cashier kitchen"><a href="menu.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span>Menu &amp; Recipes</span></a></li>
+          <li data-roles="admin kitchen inventory procurement"><a href="inventory.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Inventory</span></a></li>
+          <li data-roles="admin procurement"><a href="suppliers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg><span>Suppliers</span></a></li>
+          <li data-roles="admin procurement"><a href="procurement.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Procurement</span></a></li>
+          <li data-roles="inventory"><a href="receiving.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Receiving</span></a></li>
+          <li data-roles="admin procurement"><a href="demand.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>Demand Estimation</span></a></li>
+          <li data-roles="admin inventory procurement"><a href="reports.html" aria-current="page" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Reports</span></a></li>
+          <li data-roles="admin"><a href="user-accounts.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>User Management</span></a></li>
+          <li data-roles="admin"><a href="settings.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- END SHARED: sidebar -->
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
+      <header id="topbar" class="no-print app-topbar">
+        <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+          <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="hidden strong-sm xs:inline">Ace Bistro</span>
+        </a>
+        <div class="ml-auto flex items-center gap-1 sm:gap-2">
+          <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+          <div class="relative" data-roles="admin kitchen inventory procurement">
+            <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="hidden sm:inline">Alerts</span>
+              <span data-roles="admin inventory procurement" class="alert-count" aria-label="13 alerts">13</span>
+              <span data-roles="kitchen" class="alert-count" aria-label="9 alerts">9</span>
+            </button>
+            <div id="alerts-panel" class="popover hidden absolute right-0 top-full z-30 mt-2 w-[min(92vw,380px)]" role="region" aria-label="Alerts">
+              <div class="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+                <p class="px-4 py-3 strong-sm">Needs attention</p>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Low stock <span class="badge badge-amber">5</span></h3>
+                  <a href="inventory.html?status=below" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=out" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Shrimp</span><span class="note-block">Out of stock</span></span>
+                    <span class="badge badge-out shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Out</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Tomato</span><span class="note-block">0.6 kg left · reorder at 2</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Eggs</span><span class="note-block">2.5 tray (30 pcs) left · reorder at 7</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 2 more</p>
+              </div>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Near expiry <span class="badge badge-amber">4</span></h3>
+                  <a href="inventory.html?status=near" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Bangus (milkfish)</span><span class="note-block">3.7 kg · expires tomorrow</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Ground beef</span><span class="note-block">9.9 kg · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Fresh milk</span><span class="note-block">5.1 L · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="admin procurement">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending purchase orders <span class="badge badge-blue">4</span></h3>
+                  <a href="purchase-orders.html?status=pending" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="purchase-orders.html?status=draft" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="inventory">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending deliveries <span class="badge badge-blue">4</span></h3>
+                  <a href="receiving.html" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <div class="relative">
+            <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+              <span class="sr-only">Account menu</span>
+              <span class="user-chip" data-user-chip>
+                <span class="avatar" aria-hidden="true" data-user-initials></span>
+                <span class="hidden text-left leading-tight sm:block">
+                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
+                  <span class="cell-xs" data-user-role></span>
+                </span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
+              <div class="border-b border-slate-100 px-4 py-3">
+                <p class="strong-sm" data-user-name></p>
+                <p class="text-[13px] text-slate-600" data-user-role></p>
+              </div>
+              <ul class="p-1">
+                <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
+                <li><button type="button" data-dialog-open="logout-dialog" class="menu-item w-full text-left"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Log out</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+      <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
+        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+        <div class="modal-foot">
+          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+          <button type="button" data-logout class="btn btn-primary">Log out</button>
+        </div>
+      </dialog>
+      <!-- END SHARED: topbar -->
+
+      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
+      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
+        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
+        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
+        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      </div>
+      <!-- END SHARED: flash -->
+
+      <main id="main" tabindex="-1" class="min-w-0 flex-1 outline-none">
+        <div class="page-wrap">
+          <div data-id="report-purchase-history">
+            <nav aria-label="Breadcrumb" class="no-print mb-2 text-sm text-slate-700">
+              <ol class="flex flex-wrap items-center gap-1">
+                <li class="flex items-center gap-1">
+                  <a href="reports.html" class="font-medium text-brand hover:underline">Reports</a>
+                </li>
+                <li class="flex items-center gap-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 text-slate-500" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
+                  <span aria-current="page" class="font-semibold text-slate-900">Purchase History and Spending Summary</span>
+                </li>
+              </ol>
+            </nav>
+            <div class="page-head">
+              <div>
+                <p class="print-only text-sm font-semibold text-slate-700">Ace Bistro · Supply Chain Management System</p>
+                <h1 class="page-title">Purchase History and Spending Summary</h1>
+                <p class="page-lead">As of Friday, Nov 6, 2026, 11:30 AM · received purchases Oct 10 to Nov 6 (4 weeks)</p>
+              </div>
+              <div class="no-print flex flex-wrap gap-2">
+                <a href="purchase-orders.html" data-roles="admin procurement" class="btn btn-secondary">
+                  Open the live screen
+                </a>
+                <button type="button" data-print class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                  Print
+                </button>
+              </div>
+            </div>
+            <form method="get" action="report-purchase-history.html" class="card no-print mt-6 grid items-end gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]" aria-label="Report filters">
+              <div class="min-w-0">
+                <label for="purchase-history-f0" class="label">From</label>
+                <input id="purchase-history-f0" name="date_from" type="date" value="2026-10-10" class="input">
+              </div>
+              <div class="min-w-0">
+                <label for="purchase-history-f1" class="label">To</label>
+                <input id="purchase-history-f1" name="date_to" type="date" value="2026-11-06" class="input">
+              </div>
+              <div class="min-w-0">
+                <label for="purchase-history-f2" class="label">Supplier</label>
+                <select id="purchase-history-f2" name="supplier_id" class="input">
+                  <option selected>All suppliers</option>
+                  <option>Mercado Fresh Meats</option>
+                  <option>Blue Harbor Seafood</option>
+                  <option>Green Valley Produce</option>
+                  <option>Golden Grain Trading</option>
+                  <option>Metro Beverage &amp; Dairy Distributors</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-secondary">
+                Apply filters
+              </button>
+            </form>
+            <!-- SUMMARY RULES: Received value = SUM(received quantity × price paid) of receipts from Oct 10 to Nov 6 (the Purchase spend calendar adds up to ₱298,028); Average receipt = value ÷ receipts; Top supplier and Busiest week = highest totals in the tables below. -->
+            <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Spent · last 4 weeks</p>
+                <p class="kpi-value mt-1">₱298,028</p>
+                <p class="page-lead">29 receipts</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Average receipt</p>
+                <p class="kpi-value mt-1">₱10,277</p>
+                <p class="page-lead">received value ÷ receipts</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Top supplier</p>
+                <p class="kpi-value mt-1">Mercado Fresh Meats</p>
+                <p class="page-lead">₱130,635</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Busiest week</p>
+                <p class="kpi-value mt-1">Oct 10</p>
+                <p class="page-lead">₱89,588</p>
+              </div>
+            </div>
+
+<!-- BEGIN CALENDAR: spend -->
+<section class="cal card mt-6 min-w-0" id="cal-spend" data-cal data-scale="warn" aria-labelledby="cal-spend-title">
+  <!--
+    CALENDAR DATA — Purchase spend. Source: received quantity × price paid, on the received date, one value per day (a total per day) for the last 365 days.
+    The block below is the whole contract; calendar.js draws the Year heat-map, the Month grid from it and adds up every figure.
+    start / today: first and last day · kind: "total" (weeks and months combine days as a sum) · unit: "peso" · steps: lower bounds of colour steps c1–c5 · label: tooltip text after the day
+    values: one number per day, oldest first · asOf: today is a partial day (to 11:30 AM).
+    The backend writes the same JSON from its query (a day with no row = 0). Full field list: the header of assets/js/calendar.js.
+  -->
+  <header class="card-head gap-y-3">
+    <div class="min-w-0 flex-1 basis-60"><h2 id="cal-spend-title" class="card-title">Purchase spend per day</h2><p class="page-lead">One total per day, in pesos: Nov 7, 2025 to Nov 6, 2026</p></div>
+    <div class="scroll-thin flex max-w-full flex-wrap items-center gap-2 overflow-x-auto" data-cal-controls></div>
+  </header>
+  <div class="card-body" data-cal-views></div>
+  <script type="application/json" data-cal-data>
+{
+  "name": "Purchase spend",
+  "start": "2025-11-07",
+  "today": "2026-11-06",
+  "kind": "total",
+  "unit": "peso",
+  "noun": "spent",
+  "steps": [0,4000,8000,12000,16000],
+  "scale": "warn",
+  "label": {"one":"received","many":"received","zero":"no deliveries"},
+  "asOf": "11:30 AM",
+  "values": [
+    9800,6890,9490,8120,12755,0,10980,0,8560,8520,13495,10955,0,0,14755,10095,0,14475,13390,14345,11380,8220,6310,0,11190,11615,0,14155,12930,8430,7125,
+    17425,12480,14400,15990,12470,7780,7850,13205,16575,16680,0,13425,11230,0,17285,13225,0,0,20005,12725,12130,19160,14255,25170,3910,9440,0,7520,9920,10940,10315,
+    10830,0,6425,0,0,10840,7325,8640,0,5830,9740,13510,11100,14150,0,9780,5680,6410,11805,12795,0,10875,13265,6285,7145,0,8730,13870,0,0,6650,
+    10165,12605,8465,0,12095,8765,9205,7260,0,9875,8445,16085,16195,6585,9050,14215,0,8290,13145,15790,0,7315,13050,14055,8310,13820,10135,0,0,10855,12135,
+    11045,13395,0,9605,0,11215,13420,13065,9130,8800,8105,10670,11870,10980,12665,9005,8345,8950,9945,12785,14970,12640,8830,12210,6705,10865,14235,10480,14460,8975,12630,
+    9975,9355,9970,8625,15475,14935,0,0,11450,13550,12045,12840,0,0,10555,0,10550,13855,13840,0,12730,6135,0,15780,12605,15750,8765,9125,11515,8730,12785,
+    16015,9255,0,9535,10865,8145,13830,9680,14595,11900,13195,5880,8265,12450,9530,15985,10125,9980,0,0,0,12920,9860,14420,12575,10805,0,11655,12595,14055,14275,
+    11815,11875,10745,0,0,12900,9165,11490,7150,7040,11390,8745,14070,16305,10455,6460,0,0,16170,13485,16120,10880,0,0,12980,0,0,0,12535,0,10165,
+    13710,15340,0,0,14510,7850,7895,13500,10550,10625,17010,11180,11145,6365,16260,0,13355,11760,19185,7905,6460,8920,13725,12315,14660,13475,12480,8285,12175,16115,14220,
+    17920,11710,9955,9755,14590,16370,13740,14130,10840,0,9490,8885,13845,0,10570,0,9625,7980,0,12280,15325,11945,0,0,6785,9915,13015,18015,17015,0,0,
+    0,16550,10775,12915,14090,18410,10025,7485,12195,0,0,13805,17920,6415,9585,0,14190,17365,0,14620,11675,11510,15230,13610,9205,11875,0,22632,3172,21505,14529,
+    19107,0,8644,0,18839,5265,9467,3174,44732,0,0,5238,22202,9456,5135,0,18857,8826,20657,0,33027,3564,0,0
+  ]
+}
+  </script>
+</section>
+<!-- END CALENDAR -->
+<section class="card mt-6 min-w-0 break-inside-avoid" aria-labelledby="hist-chart">
+              <header class="card-head gap-y-2">
+                <div class="head-text">
+                  <h2 id="hist-chart" class="card-title">Spending per week</h2>
+                </div>
+              </header>
+              <div class="px-4 pb-4 md:px-6 md:pb-6">
+                <!-- CHART DATA — Purchases received per week, last 4 weeks Week to Oct 10 · ₱89,588.33 Week to Oct 17 · ₱81,476.08 Week to Oct 24 · ₱60,888.96 Week to Oct 31 · ₱66,074.96 Edit the numbers here and the matching points in BOTH svg variants (the data-tip text on each hit area is its tooltip), or let the backend draw the chart. -->
+                <div class="chart mt-3" tabindex="0" role="group" aria-label="Purchases received per week over the last 4 weeks. Use the arrow keys to read each value, Escape to close.">
+                  <div class="min-[560px]:hidden">
+                    <svg viewBox="0 0 324 260" role="img" aria-label="Purchases received per week over the last 4 weeks: Oct 10 ₱89,588.33, Oct 17 ₱81,476.08, Oct 24 ₱60,888.96, Oct 31 ₱66,074.96. ₱298,028.33 in total." class="fill-w">
+  <line class="axis" x1="52" x2="310" y1="226.0" y2="226.0"/><text x="44" y="230.0" text-anchor="end">₱0</text>
+  <line class="grid" x1="52" x2="310" y1="173.0" y2="173.0"/><text x="44" y="177.0" text-anchor="end">₱25K</text>
+  <line class="grid" x1="52" x2="310" y1="120.0" y2="120.0"/><text x="44" y="124.0" text-anchor="end">₱50K</text>
+  <line class="grid" x1="52" x2="310" y1="67.0" y2="67.0"/><text x="44" y="71.0" text-anchor="end">₱75K</text>
+  <line class="grid" x1="52" x2="310" y1="14.0" y2="14.0"/><text x="44" y="18.0" text-anchor="end">₱100K</text>
+  <text x="84.3" y="250" text-anchor="middle">Oct 10</text>
+  <text x="148.8" y="250" text-anchor="middle">Oct 17</text>
+  <text x="213.3" y="250" text-anchor="middle">Oct 24</text>
+  <text x="277.8" y="250" text-anchor="middle">Oct 31</text>
+  <g class="pt"><rect class="bar" x="64.3" y="36.1" width="40.0" height="189.9" rx="3"/><rect class="hit" x="52.0" y="14" width="64.5" height="212" data-tip="Week to Oct 10 · ₱89,588.33"/></g>
+  <g class="pt"><rect class="bar" x="128.8" y="53.3" width="40.0" height="172.7" rx="3"/><rect class="hit" x="116.5" y="14" width="64.5" height="212" data-tip="Week to Oct 17 · ₱81,476.08"/></g>
+  <g class="pt"><rect class="bar" x="193.3" y="96.9" width="40.0" height="129.1" rx="3"/><rect class="hit" x="181.0" y="14" width="64.5" height="212" data-tip="Week to Oct 24 · ₱60,888.96"/></g>
+  <g class="pt"><rect class="bar" x="257.8" y="85.9" width="40.0" height="140.1" rx="3"/><rect class="hit" x="245.5" y="14" width="64.5" height="212" data-tip="Week to Oct 31 · ₱66,074.96"/></g>
+                    </svg>
+                  </div>
+                  <div class="hidden min-[560px]:block">
+                    <svg viewBox="0 0 689 260" role="img" aria-label="Purchases received per week over the last 4 weeks: Oct 10 ₱89,588.33, Oct 17 ₱81,476.08, Oct 24 ₱60,888.96, Oct 31 ₱66,074.96. ₱298,028.33 in total." class="fill-w">
+  <line class="axis" x1="52" x2="675" y1="226.0" y2="226.0"/><text x="44" y="230.0" text-anchor="end">₱0</text>
+  <line class="grid" x1="52" x2="675" y1="173.0" y2="173.0"/><text x="44" y="177.0" text-anchor="end">₱25K</text>
+  <line class="grid" x1="52" x2="675" y1="120.0" y2="120.0"/><text x="44" y="124.0" text-anchor="end">₱50K</text>
+  <line class="grid" x1="52" x2="675" y1="67.0" y2="67.0"/><text x="44" y="71.0" text-anchor="end">₱75K</text>
+  <line class="grid" x1="52" x2="675" y1="14.0" y2="14.0"/><text x="44" y="18.0" text-anchor="end">₱100K</text>
+  <text x="129.9" y="250" text-anchor="middle">Oct 10</text>
+  <text x="285.6" y="250" text-anchor="middle">Oct 17</text>
+  <text x="441.4" y="250" text-anchor="middle">Oct 24</text>
+  <text x="597.1" y="250" text-anchor="middle">Oct 31</text>
+  <g class="pt"><rect class="bar" x="101.9" y="36.1" width="56.0" height="189.9" rx="3"/><rect class="hit" x="52.0" y="14" width="155.8" height="212" data-tip="Week to Oct 10 · ₱89,588.33"/></g>
+  <g class="pt"><rect class="bar" x="257.6" y="53.3" width="56.0" height="172.7" rx="3"/><rect class="hit" x="207.8" y="14" width="155.8" height="212" data-tip="Week to Oct 17 · ₱81,476.08"/></g>
+  <g class="pt"><rect class="bar" x="413.4" y="96.9" width="56.0" height="129.1" rx="3"/><rect class="hit" x="363.5" y="14" width="155.8" height="212" data-tip="Week to Oct 24 · ₱60,888.96"/></g>
+  <g class="pt"><rect class="bar" x="569.1" y="85.9" width="56.0" height="140.1" rx="3"/><rect class="hit" x="519.3" y="14" width="155.8" height="212" data-tip="Week to Oct 31 · ₱66,074.96"/></g>
+                    </svg>
+                  </div>
+                  <div class="chart-tip" role="status" hidden></div>
+                </div>
+                <div class="sr-only">
+                  <table>
+                    <caption>Purchases received per week, last 4 weeks</caption>
+                    <thead>
+                      <tr><th scope="col">Item</th><th scope="col">Received value</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">Oct 10</th><td>₱89,588.33</td></tr>
+                      <tr><th scope="row">Oct 17</th><td>₱81,476.08</td></tr>
+                      <tr><th scope="row">Oct 24</th><td>₱60,888.96</td></tr>
+                      <tr><th scope="row">Oct 31</th><td>₱66,074.96</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <!-- Section: Latest receipts -->
+            <section class="card mt-6 min-w-0" aria-labelledby="hist-table">
+              <header class="card-head gap-y-2">
+                <div class="head-text">
+                  <h2 id="hist-table" class="card-title">Latest receipts</h2>
+                </div>
+              </header>
+              <div class="px-4 pb-4 md:px-6 md:pb-6">
+                <div class="scroll-thin -mx-4 mt-4 overflow-x-auto md:-mx-6" tabindex="0" role="region" aria-label="Latest received purchase orders, scrollable">
+                  <table class="table">
+                    <caption class="sr-only">Latest received purchase orders</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">PO</th>
+                        <th scope="col" class="col-sm">Supplier</th>
+                        <th scope="col">Received on</th>
+                        <th scope="col" class="num col-md">Ordered</th>
+                        <th scope="col" class="num">Received value</th>
+                        <th scope="col" class="num col-md">Price variance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Backend: one row for each of the received pos (latest received first, limit 15). Source: purchase_order (status received). Rule: received value = SUM(received quantity × unit_cost paid); variance = received value − ordered total. -->
+                      <tr data-id="PO-2026-0030">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0030" class="link">PO-2026-0030</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-05" class="link">Metro Beverage &amp; Dairy Distributors</a>
+                        </td>
+                        <td>Nov 4</td>
+                        <td class="num col-md">₱5,188.00</td>
+                        <td class="num font-medium text-slate-900">₱3,564.00</td>
+                        <td class="num col-md">₱0.00</td>
+                      </tr>
+                      <tr data-id="PO-2026-0029">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0029" class="link">PO-2026-0029</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-03" class="link">Green Valley Produce</a>
+                        </td>
+                        <td>Nov 3</td>
+                        <td class="num col-md">₱5,435.00</td>
+                        <td class="num font-medium text-slate-900">₱5,385.75</td>
+                        <td class="num col-md">−₱42.25</td>
+                      </tr>
+                      <tr data-id="PO-2026-0028">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0028" class="link">PO-2026-0028</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-01" class="link">Mercado Fresh Meats</a>
+                        </td>
+                        <td>Nov 3</td>
+                        <td class="num col-md">₱18,540.00</td>
+                        <td class="num font-medium text-slate-900">₱18,415.55</td>
+                        <td class="num col-md">+₱65.55</td>
+                      </tr>
+                      <tr data-id="PO-2026-0027">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0027" class="link">PO-2026-0027</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-05" class="link">Metro Beverage &amp; Dairy Distributors</a>
+                        </td>
+                        <td>Nov 3</td>
+                        <td class="num col-md">₱9,172.00</td>
+                        <td class="num font-medium text-slate-900">₱9,226.10</td>
+                        <td class="num col-md">+₱54.10</td>
+                      </tr>
+                      <tr data-id="PO-2026-0026">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0026" class="link">PO-2026-0026</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-04" class="link">Golden Grain Trading</a>
+                        </td>
+                        <td>Nov 1</td>
+                        <td class="num col-md">₱20,645.00</td>
+                        <td class="num font-medium text-slate-900">₱20,657.44</td>
+                        <td class="num col-md">+₱12.44</td>
+                      </tr>
+                      <tr data-id="PO-2026-0025">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0025" class="link">PO-2026-0025</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-03" class="link">Green Valley Produce</a>
+                        </td>
+                        <td>Oct 31</td>
+                        <td class="num col-md">₱5,401.00</td>
+                        <td class="num font-medium text-slate-900">₱5,259.08</td>
+                        <td class="num col-md">−₱36.32</td>
+                      </tr>
+                      <tr data-id="PO-2026-0024">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0024" class="link">PO-2026-0024</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-02" class="link">Blue Harbor Seafood</a>
+                        </td>
+                        <td>Oct 31</td>
+                        <td class="num col-md">₱3,580.00</td>
+                        <td class="num font-medium text-slate-900">₱3,567.04</td>
+                        <td class="num col-md">−₱12.96</td>
+                      </tr>
+                      <tr data-id="PO-2026-0023">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0023" class="link">PO-2026-0023</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-01" class="link">Mercado Fresh Meats</a>
+                        </td>
+                        <td>Oct 30</td>
+                        <td class="num col-md">₱18,935.00</td>
+                        <td class="num font-medium text-slate-900">₱18,857.19</td>
+                        <td class="num col-md">−₱77.81</td>
+                      </tr>
+                      <tr data-id="PO-2026-0022">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0022" class="link">PO-2026-0022</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-03" class="link">Green Valley Produce</a>
+                        </td>
+                        <td>Oct 28</td>
+                        <td class="num col-md">₱5,137.00</td>
+                        <td class="num font-medium text-slate-900">₱5,135.03</td>
+                        <td class="num col-md">+₱14.03</td>
+                      </tr>
+                      <tr data-id="PO-2026-0018">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0018" class="link">PO-2026-0018</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-05" class="link">Metro Beverage &amp; Dairy Distributors</a>
+                        </td>
+                        <td>Oct 27</td>
+                        <td class="num col-md">₱9,457.64</td>
+                        <td class="num font-medium text-slate-900">₱9,456.25</td>
+                        <td class="num col-md">−₱1.39</td>
+                      </tr>
+                      <tr data-id="PO-2026-0020">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0020" class="link">PO-2026-0020</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-02" class="link">Blue Harbor Seafood</a>
+                        </td>
+                        <td>Oct 26</td>
+                        <td class="num col-md">₱3,540.00</td>
+                        <td class="num font-medium text-slate-900">₱3,508.97</td>
+                        <td class="num col-md">+₱10.97</td>
+                      </tr>
+                      <tr data-id="PO-2026-0019">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0019" class="link">PO-2026-0019</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-01" class="link">Mercado Fresh Meats</a>
+                        </td>
+                        <td>Oct 26</td>
+                        <td class="num col-md">₱18,770.00</td>
+                        <td class="num font-medium text-slate-900">₱18,693.54</td>
+                        <td class="num col-md">+₱113.54</td>
+                      </tr>
+                      <tr data-id="PO-2026-0017">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0017" class="link">PO-2026-0017</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-03" class="link">Green Valley Produce</a>
+                        </td>
+                        <td>Oct 25</td>
+                        <td class="num col-md">₱5,268.72</td>
+                        <td class="num font-medium text-slate-900">₱5,237.98</td>
+                        <td class="num col-md">−₱23.88</td>
+                      </tr>
+                      <tr data-id="PO-2026-0016">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0016" class="link">PO-2026-0016</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-03" class="link">Green Valley Produce</a>
+                        </td>
+                        <td>Oct 22</td>
+                        <td class="num col-md">₱5,443.14</td>
+                        <td class="num font-medium text-slate-900">₱5,378.43</td>
+                        <td class="num col-md">+₱47.64</td>
+                      </tr>
+                      <tr data-id="PO-2026-0015">
+                        <th scope="row">
+                          <a href="purchase-order-detail.html?id=PO-2026-0015" class="link">PO-2026-0015</a>
+                        </th>
+                        <td class="col-sm">
+                          <a href="supplier-detail.html?id=SUP-01" class="link">Mercado Fresh Meats</a>
+                        </td>
+                        <td>Oct 22</td>
+                        <td class="num col-md">₱19,490.84</td>
+                        <td class="num font-medium text-slate-900">₱19,374.93</td>
+                        <td class="num col-md">+₱55.82</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="hint-3">The latest 15 of the 29 receipts behind the ₱298,028 total. Received value counts only what arrived, at the price paid. Price variance = (price paid − PO price) × quantity received.</p>
+              </div>
+            </section>
+            <p class="report-footer print-only">Ace Bistro Supply Chain Management System · Purchase History and Spending Summary · as of Friday, Nov 6, 2026, 11:30 AM</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
+  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
+  </div>
+
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/session.js"></script>
+  <script src="assets/js/dialogs.js"></script>
+  <script src="assets/js/forms.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/calendar.js"></script>
+</body>
+</html>

@@ -1,0 +1,743 @@
+<!doctype html>
+<!--
+  PAGE: Menu & Recipes (menu.html)
+  FOR: Administrator, Cashier, Kitchen Staff.
+  PURPOSE: Dishes with their pictures and recipes; recipes drive stock use and demand.
+  SECTIONS: Dishes · Add menu item · Delete this dish?.
+  REPEATED MARKUP: 15 rows of the "menu-cat" list; the shared template "dish-dialog"; the shared template "tpl-recipe-row" (each is documented by the comment above its first copy).
+  SCRIPTS: shell, session, dialogs, forms, rows, filters, row-dialog, menu-images (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+-->
+<html lang="en" class="h-full" data-page-roles="admin cashier kitchen">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu & Recipes · Ace Bistro SCM</title>
+  <meta name="description" content="Ace Bistro Supply Chain Management System.">
+  <meta name="theme-color" content="#15803D">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
+       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
+       The backend replaces it with a server-side check. -->
+  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
+  if(!u||!u.role){location.replace('login.html');return}
+  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
+  d.setAttribute('data-role',u.role)})()</script>
+
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <noscript><style>html body { visibility: visible !important; }</style></noscript>
+</head>
+<body class="h-full bg-page font-sans text-slate-800 antialiased">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div id="app" class="min-h-full lg:flex">
+    <!-- Mobile drawer overlay -->
+    <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
+
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+          <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="leading-tight">
+            <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
+            <span class="cell-xs">Supply Chain Management</span>
+          </span>
+        </a>
+        <button type="button" data-drawer-close class="btn btn-ghost btn-sm ml-auto !px-2 lg:hidden" aria-label="Close menu"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav aria-label="Main" class="scroll-thin flex-1 overflow-y-auto p-3">
+        <ul class="space-y-1">
+          <li data-roles="admin"><a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+          <li data-roles="admin cashier"><a href="orders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg><span>Order Records</span></a></li>
+          <li data-roles="admin cashier kitchen"><a href="menu.html" aria-current="page" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span>Menu &amp; Recipes</span></a></li>
+          <li data-roles="admin kitchen inventory procurement"><a href="inventory.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Inventory</span></a></li>
+          <li data-roles="admin procurement"><a href="suppliers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg><span>Suppliers</span></a></li>
+          <li data-roles="admin procurement"><a href="procurement.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Procurement</span></a></li>
+          <li data-roles="inventory"><a href="receiving.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Receiving</span></a></li>
+          <li data-roles="admin procurement"><a href="demand.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>Demand Estimation</span></a></li>
+          <li data-roles="admin inventory procurement"><a href="reports.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Reports</span></a></li>
+          <li data-roles="admin"><a href="user-accounts.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>User Management</span></a></li>
+          <li data-roles="admin"><a href="settings.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- END SHARED: sidebar -->
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
+      <header id="topbar" class="no-print app-topbar">
+        <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+          <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="hidden strong-sm xs:inline">Ace Bistro</span>
+        </a>
+        <div class="ml-auto flex items-center gap-1 sm:gap-2">
+          <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+          <div class="relative" data-roles="admin kitchen inventory procurement">
+            <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="hidden sm:inline">Alerts</span>
+              <span data-roles="admin inventory procurement" class="alert-count" aria-label="13 alerts">13</span>
+              <span data-roles="kitchen" class="alert-count" aria-label="9 alerts">9</span>
+            </button>
+            <div id="alerts-panel" class="popover hidden absolute right-0 top-full z-30 mt-2 w-[min(92vw,380px)]" role="region" aria-label="Alerts">
+              <div class="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+                <p class="px-4 py-3 strong-sm">Needs attention</p>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Low stock <span class="badge badge-amber">5</span></h3>
+                  <a href="inventory.html?status=below" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=out" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Shrimp</span><span class="note-block">Out of stock</span></span>
+                    <span class="badge badge-out shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Out</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Tomato</span><span class="note-block">0.6 kg left · reorder at 2</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Eggs</span><span class="note-block">2.5 tray (30 pcs) left · reorder at 7</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 2 more</p>
+              </div>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Near expiry <span class="badge badge-amber">4</span></h3>
+                  <a href="inventory.html?status=near" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Bangus (milkfish)</span><span class="note-block">3.7 kg · expires tomorrow</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Ground beef</span><span class="note-block">9.9 kg · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Fresh milk</span><span class="note-block">5.1 L · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="admin procurement">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending purchase orders <span class="badge badge-blue">4</span></h3>
+                  <a href="purchase-orders.html?status=pending" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="purchase-orders.html?status=draft" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="inventory">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending deliveries <span class="badge badge-blue">4</span></h3>
+                  <a href="receiving.html" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <div class="relative">
+            <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+              <span class="sr-only">Account menu</span>
+              <span class="user-chip" data-user-chip>
+                <span class="avatar" aria-hidden="true" data-user-initials></span>
+                <span class="hidden text-left leading-tight sm:block">
+                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
+                  <span class="cell-xs" data-user-role></span>
+                </span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
+              <div class="border-b border-slate-100 px-4 py-3">
+                <p class="strong-sm" data-user-name></p>
+                <p class="text-[13px] text-slate-600" data-user-role></p>
+              </div>
+              <ul class="p-1">
+                <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
+                <li><button type="button" data-dialog-open="logout-dialog" class="menu-item w-full text-left"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Log out</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+      <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
+        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+        <div class="modal-foot">
+          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+          <button type="button" data-logout class="btn btn-primary">Log out</button>
+        </div>
+      </dialog>
+      <!-- END SHARED: topbar -->
+
+      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
+      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
+        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
+        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
+        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      </div>
+      <!-- END SHARED: flash -->
+
+      <main id="main" tabindex="-1" class="min-w-0 flex-1 outline-none">
+        <div class="page-wrap">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Menu &amp; Recipes</h1>
+              <p class="page-lead">Dishes with their pictures and recipes; recipes drive stock use and demand.</p>
+            </div>
+            <button type="button" data-roles="admin" data-dialog-open="add-dish" class="btn btn-primary"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Add menu item</button>
+          </div>
+          <!-- Section: Dishes -->
+          <section class="card mt-6 min-w-0" aria-labelledby="menu-list-title">
+            <header class="card-head gap-y-2">
+              <div class="head-text"><h2 id="menu-list-title" class="card-title">Dishes</h2></div>
+              <div class="scroll-thin max-w-full overflow-x-auto">
+                <form id="filter-menu" method="get" action="menu.html" data-filter-form="menu-cat"></form>
+                <div class="seg" role="group" aria-label="Dish category">
+                  <button type="submit" form="filter-menu" name="category" value="all" aria-pressed="true" data-filter-group="menu-cat" data-filter-value="all">All (<span data-count="menu-cat:all">15</span>)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Rice Meals" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Rice Meals">Rice Meals (<span data-count="menu-cat:Rice Meals">7</span>)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Snacks &amp; Noodles" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Snacks &amp; Noodles">Snacks &amp; Noodles (<span data-count="menu-cat:Snacks &amp; Noodles">4</span>)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Beverages" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Beverages">Beverages (<span data-count="menu-cat:Beverages">3</span>)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Desserts" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Desserts">Desserts (<span data-count="menu-cat:Desserts">1</span>)</button>
+                </div>
+              </div>
+            </header>
+            <div class="card-body">
+              <div class="scroll-thin -mx-4 overflow-x-auto md:-mx-6" tabindex="0" role="region" aria-label="Menu table, scrollable">
+                <table class="table">
+                  <caption class="sr-only">Dishes with picture, price, preparation time, number of ingredients, servings possible from usable stock, and availability.</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col"><span class="sr-only">Picture</span></th>
+                      <th scope="col">Dish</th>
+                      <th scope="col">Category</th>
+                      <th scope="col" class="num">Price</th>
+                      <th scope="col" class="num">Prep</th>
+                      <th scope="col" class="num">Ingredients</th>
+                      <th scope="col" class="num">Servings possible</th>
+                      <th scope="col">Availability</th>
+                      <th scope="col" class="num"><span class="sr-only">Recipe</span></th>
+                    </tr>
+                  </thead>
+                  <!--
+                    ROW TEMPLATE (repeated once for each menu item; source: menu_item + recipes + ingredients). The row carries everything the shared dish dialog shows:
+                      data-code      menu_item.item_id                 data-title      name                  data-category  category
+                      data-price     pesos                             data-prep       minutes               data-available "1" when shown on the order screen
+                      data-image     picture path = menu_item.image_path (EXTRA column, not in the proposal ERD; the placeholder when the dish has none)
+                      data-recipe    "ingredient id|ingredient name|quantity per serving|unit|usable stock|note" entries separated by ";" (one per recipes row)
+                      data-cost      ingredient cost per serving = SUM(quantity_used × the ingredient's latest unit cost)
+                      data-servings  servings possible = FLOOR(MIN(usable stock ÷ quantity_used)) over the recipe; usable stock excludes expired batches
+                      data-short     "1" when servings = 0 (an ingredient is out); data-limited = the ingredient that sets the limit (or is out)
+                    The Ingredients column is the number of recipe entries; the badge is Unavailable (flag off or an ingredient out), "Only n left" (n ≤ 12) or Available.
+                  -->
+                  <tbody>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-01" data-title="Chicken Adobo Rice Meal" data-category="Rice Meals" data-price="120" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-01.svg" data-cost="₱57.96" data-servings="53" data-short="0" data-limited="chicken breast" data-recipe="ING-01|Chicken breast|0.18|kg|9.7|;ING-19|Soy sauce|0.03|L|11.7|;ING-20|Vinegar|0.02|L|7.3|;ING-11|Garlic|0.01|kg|6.8|;ING-10|Onion|0.02|kg|18.3|;ING-18|Cooking oil|0.02|L|8.3|;ING-15|Rice|0.2|kg|183|">
+                      <td><img src="assets/img/dishes/mnu-01.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Chicken Adobo Rice Meal</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱120</td>
+                      <td class="num whitespace-nowrap">12 min</td>
+                      <td class="num">7</td>
+                      <td class="num">53</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Chicken Adobo Rice Meal">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-02" data-title="Pork Sisig Rice Meal" data-category="Rice Meals" data-price="140" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-02.svg" data-cost="₱92.51" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-02|Pork belly|0.2|kg|28.4|;ING-10|Onion|0.05|kg|18.3|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-18|Cooking oil|0.02|L|8.3|;ING-21|Salt|0.002|kg|1|;ING-15|Rice|0.2|kg|183|">
+                      <td><img src="assets/img/dishes/mnu-02.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Pork Sisig Rice Meal</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱140</td>
+                      <td class="num whitespace-nowrap">15 min</td>
+                      <td class="num">6</td>
+                      <td class="num">75</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Pork Sisig Rice Meal">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-03" data-title="Beef Tapsilog" data-category="Rice Meals" data-price="135" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-03.svg" data-cost="₱83.19" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-03|Ground beef|0.15|kg|49.4|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-11|Garlic|0.01|kg|6.8|;ING-19|Soy sauce|0.02|L|11.7|;ING-20|Vinegar|0.01|L|7.3|;ING-18|Cooking oil|0.03|L|8.3|;ING-15|Rice|0.2|kg|183|">
+                      <td><img src="assets/img/dishes/mnu-03.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Beef Tapsilog</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱135</td>
+                      <td class="num whitespace-nowrap">12 min</td>
+                      <td class="num">7</td>
+                      <td class="num">75</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Beef Tapsilog">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-04" data-title="Fried Bangus Rice Meal" data-category="Rice Meals" data-price="150" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-04.svg" data-cost="₱66.10" data-servings="73" data-short="0" data-limited="bangus (milkfish)" data-recipe="ING-04|Bangus (milkfish)|0.25|kg|18.4|;ING-18|Cooking oil|0.05|L|8.3|;ING-15|Rice|0.2|kg|183|;ING-20|Vinegar|0.02|L|7.3|;ING-11|Garlic|0.01|kg|6.8|">
+                      <td><img src="assets/img/dishes/mnu-04.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Fried Bangus Rice Meal</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱150</td>
+                      <td class="num whitespace-nowrap">15 min</td>
+                      <td class="num">5</td>
+                      <td class="num">73</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Fried Bangus Rice Meal">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-05" data-title="Garlic Butter Shrimp Rice Meal" data-category="Rice Meals" data-price="220" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-05.svg" data-cost="₱94.96" data-servings="0" data-short="1" data-limited="shrimp" data-recipe="ING-05|Shrimp|0.15|kg|0|;ING-08|Butter|0.03|kg|1.9|;ING-11|Garlic|0.02|kg|6.8|;ING-18|Cooking oil|0.02|L|8.3|;ING-15|Rice|0.2|kg|183|">
+                      <td><img src="assets/img/dishes/mnu-05.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Garlic Butter Shrimp Rice Meal</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱220</td>
+                      <td class="num whitespace-nowrap">12 min</td>
+                      <td class="num">5</td>
+                      <td class="num">0</td>
+                      <td><span class="badge badge-red"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Unavailable</span><span class="mt-1 note-block">Out of shrimp</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Garlic Butter Shrimp Rice Meal">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-06" data-title="Fried Chicken Rice Meal" data-category="Rice Meals" data-price="130" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-06.svg" data-cost="₱86.03" data-servings="38" data-short="0" data-limited="chicken breast" data-recipe="ING-01|Chicken breast|0.25|kg|9.7|;ING-16|All-purpose flour|0.05|kg|10.8|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-18|Cooking oil|0.1|L|8.3|;ING-15|Rice|0.2|kg|183|;ING-21|Salt|0.003|kg|1|">
+                      <td><img src="assets/img/dishes/mnu-06.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Fried Chicken Rice Meal</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱130</td>
+                      <td class="num whitespace-nowrap">15 min</td>
+                      <td class="num">6</td>
+                      <td class="num">38</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Fried Chicken Rice Meal">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-07" data-title="Beef Giniling Rice Meal" data-category="Rice Meals" data-price="125" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-07.svg" data-cost="₱71.40" data-servings="12" data-short="0" data-limited="tomato" data-recipe="ING-03|Ground beef|0.12|kg|49.4|;ING-14|Potato|0.08|kg|57|;ING-12|Tomato|0.05|kg|0.6|;ING-10|Onion|0.03|kg|18.3|;ING-11|Garlic|0.01|kg|6.8|;ING-15|Rice|0.2|kg|183|">
+                      <td><img src="assets/img/dishes/mnu-07.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Beef Giniling Rice Meal</span></th>
+                      <td>Rice Meals</td>
+                      <td class="num">₱125</td>
+                      <td class="num whitespace-nowrap">12 min</td>
+                      <td class="num">6</td>
+                      <td class="num">12</td>
+                      <td><span class="badge badge-amber"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Only 12 left</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Beef Giniling Rice Meal">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-08" data-title="Pancit Canton" data-category="Snacks &amp; Noodles" data-price="110" data-prep="10" data-available="1" data-image="assets/img/dishes/mnu-08.svg" data-cost="₱35.31" data-servings="121" data-short="0" data-limited="pancit canton noodles" data-recipe="ING-17|Pancit canton noodles|0.12|kg|14.6|;ING-01|Chicken breast|0.05|kg|9.7|;ING-13|Cabbage|0.06|kg|7.7|;ING-10|Onion|0.02|kg|18.3|;ING-11|Garlic|0.01|kg|6.8|;ING-19|Soy sauce|0.02|L|11.7|;ING-18|Cooking oil|0.02|L|8.3|">
+                      <td><img src="assets/img/dishes/mnu-08.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Pancit Canton</span></th>
+                      <td>Snacks &amp; Noodles</td>
+                      <td class="num">₱110</td>
+                      <td class="num whitespace-nowrap">10 min</td>
+                      <td class="num">7</td>
+                      <td class="num">121</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Pancit Canton">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-09" data-title="Cheeseburger with Fries" data-category="Snacks &amp; Noodles" data-price="165" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-09.svg" data-cost="₱106.64" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-03|Ground beef|0.15|kg|49.4|;ING-16|All-purpose flour|0.03|kg|10.8|;ING-09|Cheese|0.03|kg|4.6|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-14|Potato|0.2|kg|57|;ING-18|Cooking oil|0.1|L|8.3|">
+                      <td><img src="assets/img/dishes/mnu-09.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Cheeseburger with Fries</span></th>
+                      <td>Snacks &amp; Noodles</td>
+                      <td class="num">₱165</td>
+                      <td class="num whitespace-nowrap">12 min</td>
+                      <td class="num">6</td>
+                      <td class="num">75</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Cheeseburger with Fries">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-10" data-title="French Fries" data-category="Snacks &amp; Noodles" data-price="80" data-prep="8" data-available="1" data-image="assets/img/dishes/mnu-10.svg" data-cost="₱31.10" data-servings="83" data-short="0" data-limited="cooking oil" data-recipe="ING-14|Potato|0.25|kg|57|;ING-18|Cooking oil|0.1|L|8.3|;ING-21|Salt|0.002|kg|1|">
+                      <td><img src="assets/img/dishes/mnu-10.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">French Fries</span></th>
+                      <td>Snacks &amp; Noodles</td>
+                      <td class="num">₱80</td>
+                      <td class="num whitespace-nowrap">8 min</td>
+                      <td class="num">3</td>
+                      <td class="num">83</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of French Fries">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-11" data-title="Cheese Omelette" data-category="Snacks &amp; Noodles" data-price="95" data-prep="8" data-available="1" data-image="assets/img/dishes/mnu-11.svg" data-cost="₱48.10" data-servings="20" data-short="0" data-limited="tomato" data-recipe="ING-06|Eggs|0.1|tray (30 pcs)|2.5|= 3 eggs (1 egg = 1/30 tray);ING-09|Cheese|0.03|kg|4.6|;ING-08|Butter|0.01|kg|1.9|;ING-12|Tomato|0.03|kg|0.6|;ING-10|Onion|0.02|kg|18.3|">
+                      <td><img src="assets/img/dishes/mnu-11.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Cheese Omelette</span></th>
+                      <td>Snacks &amp; Noodles</td>
+                      <td class="num">₱95</td>
+                      <td class="num whitespace-nowrap">8 min</td>
+                      <td class="num">5</td>
+                      <td class="num">20</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Cheese Omelette">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Beverages" data-code="MNU-12" data-title="Iced Coffee" data-category="Beverages" data-price="85" data-prep="4" data-available="1" data-image="assets/img/dishes/mnu-12.svg" data-cost="₱28.50" data-servings="165" data-short="0" data-limited="coffee beans" data-recipe="ING-23|Coffee beans|0.02|kg|3.3|;ING-07|Fresh milk|0.12|L|25.7|;ING-22|Sugar|0.02|kg|5.5|">
+                      <td><img src="assets/img/dishes/mnu-12.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Iced Coffee</span></th>
+                      <td>Beverages</td>
+                      <td class="num">₱85</td>
+                      <td class="num whitespace-nowrap">4 min</td>
+                      <td class="num">3</td>
+                      <td class="num">165</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Iced Coffee">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Beverages" data-code="MNU-13" data-title="Cola" data-category="Beverages" data-price="40" data-prep="1" data-available="1" data-image="assets/img/dishes/mnu-13.svg" data-cost="₱18.00" data-servings="133" data-short="0" data-limited="cola (355 ml bottle)" data-recipe="ING-24|Cola (355 ml bottle)|1|bottles|133|">
+                      <td><img src="assets/img/dishes/mnu-13.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Cola</span></th>
+                      <td>Beverages</td>
+                      <td class="num">₱40</td>
+                      <td class="num whitespace-nowrap">1 min</td>
+                      <td class="num">1</td>
+                      <td class="num">133</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Cola">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Beverages" data-code="MNU-14" data-title="Bottled Water" data-category="Beverages" data-price="25" data-prep="1" data-available="1" data-image="assets/img/dishes/mnu-14.svg" data-cost="₱9.00" data-servings="92" data-short="0" data-limited="bottled water (500 ml)" data-recipe="ING-25|Bottled water (500 ml)|1|bottles|92|">
+                      <td><img src="assets/img/dishes/mnu-14.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Bottled Water</span></th>
+                      <td>Beverages</td>
+                      <td class="num">₱25</td>
+                      <td class="num whitespace-nowrap">1 min</td>
+                      <td class="num">1</td>
+                      <td class="num">92</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Bottled Water">Recipe</button></td>
+                    </tr>
+                    <tr data-row data-filter-in="menu-cat" data-filter-key="Desserts" data-code="MNU-15" data-title="Leche Flan" data-category="Desserts" data-price="80" data-prep="3" data-available="1" data-image="assets/img/dishes/mnu-15.svg" data-cost="₱36.35" data-servings="37" data-short="0" data-limited="eggs" data-recipe="ING-06|Eggs|0.0667|tray (30 pcs)|2.5|= 2 eggs (1 egg = 1/30 tray);ING-07|Fresh milk|0.15|L|25.7|;ING-22|Sugar|0.06|kg|5.5|">
+                      <td><img src="assets/img/dishes/mnu-15.svg" alt="" width="48" height="48" class="dish-thumb"></td>
+                      <th scope="row"><span class="font-semibold text-slate-900">Leche Flan</span></th>
+                      <td>Desserts</td>
+                      <td class="num">₱80</td>
+                      <td class="num whitespace-nowrap">3 min</td>
+                      <td class="num">3</td>
+                      <td class="num">37</td>
+                      <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
+                      <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Leche Flan">Recipe</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+          <!--
+            ONE shared dish dialog. A click on a row's Recipe button copies that row's data- attributes into a copy of this dialog (row-dialog.js):
+            data-bind (text), data-bind-src (picture), data-bind-value (form fields), data-lines-body (recipe lines from data-recipe), data-bind-fill (Delete button).
+            Cashier and kitchen see it read-only: the picture upload, Delete and Save carry data-roles="admin".
+          -->
+          <template id="dish-dialog">
+            <dialog id="dish-dialog-source" class="modal modal-lg" aria-labelledby="dish-dialog-title">
+              <div class="modal-head">
+                <h2 id="dish-dialog-title" class="title-lg" data-bind="title"></h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+              </div>
+              <form id="dish-form" data-unsaved-warning method="post" action="menu.html" enctype="multipart/form-data" data-local-save data-toast-open="toast-saved">
+                <div class="form-error" role="alert" id="dish-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <input type="hidden" name="item_id" value data-bind-value="code">
+                <div class="modal-body space-y-5">
+                  <div data-image-upload data-max-mb="2" class="grid gap-4 sm:grid-cols-[224px_1fr]">
+              <img data-bind-src="image" data-bind-alt="" data-image-preview data-placeholder="assets/img/dishes/placeholder.svg" src="assets/img/dishes/placeholder.svg" alt="" width="224" height="224" class="dish-hero">
+              <div data-roles="admin" class="space-y-2">
+                <label for="dish-image" data-image-drop class="upload-drop">
+                  <span class="font-medium text-slate-900">Drag a picture here or click to choose</span>
+                  <small>JPEG, PNG or WebP, up to 2 MB</small>
+                  <input id="dish-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" aria-describedby="dish-image-error">
+                </label>
+                <p class="field-error" id="dish-image-error" data-image-error hidden></p>
+                <input type="hidden" name="remove_image" value>
+                <button type="button" data-image-remove class="btn btn-secondary btn-sm" hidden>Remove image</button>
+              </div>
+            </div>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                      <label for="dish-name" class="label">Dish name</label>
+                      <input id="dish-name" name="name" type="text" data-bind-value="title" class="input" required maxlength="100" aria-describedby="dish-name-error">
+                      <p class="field-error" id="dish-name-error" hidden>Enter the dish name (100 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="dish-cat" class="label">Category</label>
+                      <select id="dish-cat" name="category" data-bind-value="category" class="input" required aria-describedby="dish-cat-error">
+                        <option>Rice Meals</option>
+                        <option>Snacks &amp; Noodles</option>
+                        <option>Beverages</option>
+                        <option>Desserts</option>
+                      </select>
+                      <p class="field-error" id="dish-cat-error" hidden>Choose a category.</p>
+                    </div>
+                    <div>
+                      <label for="dish-price" class="label">Price (₱)</label>
+                      <input id="dish-price" name="price" type="number" inputmode="decimal" min="0" step="0.01" data-bind-value="price" class="input" required max="99999.99" aria-describedby="dish-price-error">
+                      <p class="field-error" id="dish-price-error" hidden>Enter a price in pesos (0 or more).</p>
+                    </div>
+                    <div>
+                      <label for="dish-prep" class="label">Prep time (minutes)</label>
+                      <input id="dish-prep" name="prep_minutes" type="number" inputmode="numeric" min="1" step="1" data-bind-value="prep" class="input" required max="240" aria-describedby="dish-prep-error">
+                      <p class="field-error" id="dish-prep-error" hidden>Enter the preparation time in minutes (1 to 240).</p>
+                    </div>
+                    <div class="flex items-end">
+                      <label class="flex min-h-[40px] items-center gap-2 text-sm font-medium text-slate-900">
+                        <input type="checkbox" name="availability" value="1" data-bind-value="available" class="h-5 w-5 accent-[#15803D]">
+                        Show on the order screen
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 class="strong-sm">Recipe (ingredients for one serving)</h3>
+                    <div class="scroll-thin -mx-3 mt-2 overflow-x-auto" tabindex="0" role="region" aria-label="Recipe ingredients, scrollable">
+                      <table class="table">
+                        <caption class="sr-only">Ingredients and quantity per serving</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">Ingredient</th>
+                            <th scope="col" class="num">Per serving</th>
+                            <th scope="col">Unit</th>
+                            <th scope="col" class="num">Usable stock</th>
+                            <th scope="col" class="num" data-roles="admin"><span class="sr-only">Remove</span></th>
+                          </tr>
+                        </thead>
+                        <tbody id="recipe-rows" data-lines-body="recipe" data-fields="id|name|qty|unit|stock|note" data-line-template="tpl-recipe-row"></tbody>
+                      </table>
+                    </div>
+                    <p class="mt-2 text-sm text-slate-600" data-lines-empty="recipe" hidden>This dish has no recipe yet. Add its first ingredient below.</p>
+                    <div data-roles="admin" class="mt-3 grid gap-2 sm:grid-cols-[1fr_8rem_auto]">
+                      <div>
+                        <label for="add-ing" class="label">Add ingredient</label>
+                        <select id="add-ing" name="new_ingredient_id" class="input">
+                          <option value>Choose…</option>
+                          <option value="ING-01">Chicken breast (kg)</option>
+                          <option value="ING-02">Pork belly (kg)</option>
+                          <option value="ING-03">Ground beef (kg)</option>
+                          <option value="ING-04">Bangus (milkfish) (kg)</option>
+                          <option value="ING-05">Shrimp (kg)</option>
+                          <option value="ING-06">Eggs (tray (30 pcs))</option>
+                          <option value="ING-07">Fresh milk (L)</option>
+                          <option value="ING-08">Butter (kg)</option>
+                          <option value="ING-09">Cheese (kg)</option>
+                          <option value="ING-10">Onion (kg)</option>
+                          <option value="ING-11">Garlic (kg)</option>
+                          <option value="ING-12">Tomato (kg)</option>
+                          <option value="ING-13">Cabbage (kg)</option>
+                          <option value="ING-14">Potato (kg)</option>
+                          <option value="ING-15">Rice (kg)</option>
+                          <option value="ING-16">All-purpose flour (kg)</option>
+                          <option value="ING-17">Pancit canton noodles (kg)</option>
+                          <option value="ING-18">Cooking oil (L)</option>
+                          <option value="ING-19">Soy sauce (L)</option>
+                          <option value="ING-20">Vinegar (L)</option>
+                          <option value="ING-21">Salt (kg)</option>
+                          <option value="ING-22">Sugar (kg)</option>
+                          <option value="ING-23">Coffee beans (kg)</option>
+                          <option value="ING-24">Cola (355 ml bottle) (bottles)</option>
+                          <option value="ING-25">Bottled water (500 ml) (bottles)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label for="add-qty" class="label">Per serving</label>
+                        <input id="add-qty" name="new_quantity_used" type="number" inputmode="decimal" min="0.0001" step="any" class="input">
+                      </div>
+                      <div class="flex items-end">
+                        <button type="button" data-add-row="tpl-recipe-row" data-add-to="recipe-rows" data-row-unique data-row-stock="—" data-row-note="" data-row-from-select="add-ing" data-row-from-input="add-qty" class="btn btn-secondary w-full">Add</button>
+                      </div>
+                    </div>
+                  </div>
+                  <dl class="grid grid-cols-1 gap-3 rounded-md bg-slate-50 p-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt class="text-slate-600">Ingredient cost per serving (estimate)</dt>
+                      <dd class="font-semibold tabular text-slate-900" data-bind="cost"></dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-600">Servings possible from usable stock</dt>
+                      <dd class="font-semibold tabular text-slate-900"><span data-bind="servings"></span>
+                        <span data-show="short:0" class="font-normal text-slate-600">· limited by <span data-bind="limited"></span></span>
+                        <span data-show="short:1" class="font-normal text-red-800">· Out of <span data-bind="limited"></span></span></dd>
+                    </div>
+                  </dl>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-bind-fill data-dialog-open="dlg-delete-dish" data-roles="admin" class="btn btn-danger mr-auto">Delete dish</button>
+                  <button type="button" data-dialog-close class="btn btn-secondary">Close</button>
+                  <button type="submit" data-roles="admin" class="btn btn-primary">Save changes</button>
+                </div>
+              </form>
+            </dialog>
+          </template>
+          <dialog id="add-dish" class="modal modal-lg" aria-labelledby="add-dish-title">
+            <div class="modal-head">
+              <h2 id="add-dish-title" class="title-lg">Add menu item</h2>
+              <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+            <form id="add-dish-form" method="post" action="menu.html" enctype="multipart/form-data" data-local-save data-toast-open="toast-added-dish">
+              <div class="form-error" role="alert" id="add-dish-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+              <div class="modal-body space-y-4">
+                <div>
+                  <label for="new-name" class="label">Dish name</label>
+                  <input id="new-name" name="name" type="text" class="input" placeholder="e.g. Sizzling Tofu" required maxlength="100" aria-describedby="new-name-error">
+                  <p class="field-error" id="new-name-error" hidden>Enter the dish name (100 characters at most).</p>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label for="new-cat" class="label">Category</label>
+                    <select id="new-cat" name="category" class="input" required aria-describedby="new-cat-error">
+                      <option selected>Rice Meals</option>
+                      <option>Snacks &amp; Noodles</option>
+                      <option>Beverages</option>
+                      <option>Desserts</option>
+                    </select>
+                    <p class="field-error" id="new-cat-error" hidden>Choose a category.</p>
+                  </div>
+                  <div>
+                    <label for="new-price" class="label">Price (₱)</label>
+                    <input id="new-price" name="price" type="number" inputmode="decimal" min="0" step="0.01" class="input" required max="99999.99" aria-describedby="new-price-error">
+                    <p class="field-error" id="new-price-error" hidden>Enter a price in pesos (0 or more).</p>
+                  </div>
+                  <div>
+                    <label for="new-prep" class="label">Prep time (minutes)</label>
+                    <input id="new-prep" name="prep_minutes" type="number" inputmode="numeric" min="1" step="1" class="input" required max="240" aria-describedby="new-prep-error">
+                    <p class="field-error" id="new-prep-error" hidden>Enter the preparation time in minutes (1 to 240).</p>
+                  </div>
+                  <div class="flex items-end">
+                    <label class="flex min-h-[40px] items-center gap-2 text-sm font-medium text-slate-900">
+                      <input type="checkbox" name="availability" value="1" checked class="h-5 w-5 accent-[#15803D]">
+                      Show on the order screen
+                    </label>
+                  </div>
+                </div>
+                <div data-image-upload data-max-mb="2" class="grid gap-4 sm:grid-cols-[224px_1fr]">
+            <img data-image-preview data-placeholder="assets/img/dishes/placeholder.svg" src="assets/img/dishes/placeholder.svg" alt="" width="224" height="224" class="dish-hero">
+            <div class="space-y-2">
+              <label for="new-image" data-image-drop class="upload-drop">
+                <span class="font-medium text-slate-900">Drag a picture here or click to choose</span>
+                <small>JPEG, PNG or WebP, up to 2 MB</small>
+                <input id="new-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" aria-describedby="new-image-error">
+              </label>
+              <p class="field-error" id="new-image-error" data-image-error hidden></p>
+              <input type="hidden" name="remove_image" value>
+              <button type="button" data-image-remove class="btn btn-secondary btn-sm" hidden>Remove image</button>
+            </div>
+          </div>
+                <p class="text-[13px] text-slate-600">Save the dish first, then open its recipe to add ingredients. A dish without a recipe cannot be ordered.</p>
+              </div>
+              <div class="modal-foot">
+                <button type="button" data-dialog-close class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add dish</button>
+              </div>
+            </form>
+          </dialog>
+          <!-- ONE delete confirmation for every dish; the Delete button of the dish dialog fills the name and id (dialogs.js, data-fill-*). -->
+          <dialog id="dlg-delete-dish" class="modal" aria-labelledby="dlg-delete-dish-title">
+                        <div class="modal-head">
+                          <h2 id="dlg-delete-dish-title" class="title-lg">Delete this dish?</h2>
+                          <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                          </button>
+                        </div>
+                        <form id="dlg-delete-dish-form" method="post" action="menu.html" data-local-save data-toast-open="toast-dish-removed">
+                          <!-- Backend: POST only. A dish with order_items cannot be deleted: save action=archive (availability = 0) instead. Deleting also removes its recipes rows. -->
+                          <div class="modal-body space-y-3">
+                            <input type="hidden" name="item_id" value data-fill-input="id">
+                            <p class="text-sm text-slate-700">You are about to delete <strong data-fill="name">Chicken Adobo Rice Meal</strong> and its recipe.</p>
+                            <p class="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-[13px] text-amber-900"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><span>A dish that already appears on orders <strong>cannot be deleted</strong>, because the sales history would lose it. Use <strong>Mark unavailable</strong> instead: it disappears from the order screen and stays in reports.</span></p>
+                          </div>
+                          <div class="modal-foot">
+                            <button type="button" data-dialog-close class="btn btn-secondary">Cancel</button>
+                            <button type="submit" name="action" value="archive" class="btn btn-secondary">Mark unavailable</button>
+                            <button type="submit" name="action" value="delete" class="btn btn-danger">Delete dish</button>
+                          </div>
+                        </form>
+                      </dialog>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!--
+    Recipe line template: ONE for the page. row-dialog.js fills it for every entry of the row's data-recipe, and the "Add" button (rows.js) fills it for a new line.
+    Placeholders: __id__ ingredient id, __name__, __qty__ quantity per serving, __unit__, __stock__ usable stock (the sum of the ingredient's batches that are not expired), __note__ (shown only when not empty).
+    Backend: each line is one recipes row (item_id, ingredient_id, quantity_used).
+  -->
+  <template id="tpl-recipe-row">
+    <tr data-id="__id__" data-row>
+      <th scope="row">__name__<input type="hidden" name="ingredient_id[]" value="__id__"></th>
+      <td class="num">
+        <label class="sr-only" for="q-__id__">Quantity of __name__ per serving</label>
+        <input id="q-__id__" name="quantity_used[]" type="number" inputmode="decimal" min="0" step="any" value="__qty__" class="input !w-24 text-right" required aria-describedby="q-__id__-error">
+        <p class="field-error" id="q-__id__-error" hidden>Enter a quantity of 0 or more.</p>
+      </td>
+      <td>__unit__<span class="note-block">__note__</span></td>
+      <td class="num">__stock__</td>
+      <td class="num" data-roles="admin">
+        <button type="button" data-remove-row class="btn btn-ghost btn-sm !px-2" aria-label="Remove __name__ from the recipe"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </td>
+    </tr>
+  </template>
+
+  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
+  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
+    <div id="toast-dish-removed" class="toast toast-warning pointer-events-auto hidden">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">Dish updated</p>
+        <p class="mt-0.5 text-sm text-slate-700">A dish with order history is marked unavailable instead of being deleted.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-saved" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">Changes saved</p>
+        <p class="mt-0.5 text-sm text-slate-600">The dish and its recipe were updated.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-added-dish" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">Dish added</p>
+        <p class="mt-0.5 text-sm text-slate-600">It now appears in the menu table.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/session.js"></script>
+  <script src="assets/js/dialogs.js"></script>
+  <script src="assets/js/forms.js"></script>
+  <script src="assets/js/rows.js"></script>
+  <script src="assets/js/filters.js"></script>
+  <script src="assets/js/row-dialog.js"></script>
+  <script src="assets/js/menu-images.js"></script>
+</body>
+</html>

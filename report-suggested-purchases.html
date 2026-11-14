@@ -1,0 +1,659 @@
+<!doctype html>
+<!--
+  PAGE: Suggested Purchase Quantities (report-suggested-purchases.html)
+  FOR: Administrator, Procurement Officer.
+  PURPOSE: As of Friday, Nov 6, 2026, 11:30 AM · forecast for the next 7 days: average of the last 7 complete days × 7
+  SECTIONS: Suggested purchases per day · Estimated cost by supplier · Suggested quantities and how they are worked out.
+  REPEATED MARKUP: calendar JSON block(s) (data-cal-data) (each is documented by the comment above its first copy).
+  SCRIPTS: shell, session, dialogs, forms, charts, calendar (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+-->
+<html lang="en" class="h-full" data-page-roles="admin procurement">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suggested Purchase Quantities · Ace Bistro SCM</title>
+  <meta name="description" content="Ace Bistro Supply Chain Management System.">
+  <meta name="theme-color" content="#15803D">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
+       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
+       The backend replaces it with a server-side check. -->
+  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
+  if(!u||!u.role){location.replace('login.html');return}
+  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
+  d.setAttribute('data-role',u.role)})()</script>
+
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <noscript><style>html body { visibility: visible !important; }</style></noscript>
+</head>
+<body class="h-full bg-page font-sans text-slate-800 antialiased">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div id="app" class="min-h-full lg:flex">
+    <!-- Mobile drawer overlay -->
+    <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
+
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+          <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="leading-tight">
+            <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
+            <span class="cell-xs">Supply Chain Management</span>
+          </span>
+        </a>
+        <button type="button" data-drawer-close class="btn btn-ghost btn-sm ml-auto !px-2 lg:hidden" aria-label="Close menu"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav aria-label="Main" class="scroll-thin flex-1 overflow-y-auto p-3">
+        <ul class="space-y-1">
+          <li data-roles="admin"><a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+          <li data-roles="admin cashier"><a href="orders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg><span>Order Records</span></a></li>
+          <li data-roles="admin cashier kitchen"><a href="menu.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span>Menu &amp; Recipes</span></a></li>
+          <li data-roles="admin kitchen inventory procurement"><a href="inventory.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Inventory</span></a></li>
+          <li data-roles="admin procurement"><a href="suppliers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg><span>Suppliers</span></a></li>
+          <li data-roles="admin procurement"><a href="procurement.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Procurement</span></a></li>
+          <li data-roles="inventory"><a href="receiving.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Receiving</span></a></li>
+          <li data-roles="admin procurement"><a href="demand.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>Demand Estimation</span></a></li>
+          <li data-roles="admin inventory procurement"><a href="reports.html" aria-current="page" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Reports</span></a></li>
+          <li data-roles="admin"><a href="user-accounts.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>User Management</span></a></li>
+          <li data-roles="admin"><a href="settings.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- END SHARED: sidebar -->
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
+      <header id="topbar" class="no-print app-topbar">
+        <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+          <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="hidden strong-sm xs:inline">Ace Bistro</span>
+        </a>
+        <div class="ml-auto flex items-center gap-1 sm:gap-2">
+          <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+          <div class="relative" data-roles="admin kitchen inventory procurement">
+            <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="hidden sm:inline">Alerts</span>
+              <span data-roles="admin inventory procurement" class="alert-count" aria-label="13 alerts">13</span>
+              <span data-roles="kitchen" class="alert-count" aria-label="9 alerts">9</span>
+            </button>
+            <div id="alerts-panel" class="popover hidden absolute right-0 top-full z-30 mt-2 w-[min(92vw,380px)]" role="region" aria-label="Alerts">
+              <div class="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+                <p class="px-4 py-3 strong-sm">Needs attention</p>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Low stock <span class="badge badge-amber">5</span></h3>
+                  <a href="inventory.html?status=below" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=out" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Shrimp</span><span class="note-block">Out of stock</span></span>
+                    <span class="badge badge-out shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Out</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Tomato</span><span class="note-block">0.6 kg left · reorder at 2</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Eggs</span><span class="note-block">2.5 tray (30 pcs) left · reorder at 7</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 2 more</p>
+              </div>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Near expiry <span class="badge badge-amber">4</span></h3>
+                  <a href="inventory.html?status=near" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Bangus (milkfish)</span><span class="note-block">3.7 kg · expires tomorrow</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Ground beef</span><span class="note-block">9.9 kg · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Fresh milk</span><span class="note-block">5.1 L · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="admin procurement">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending purchase orders <span class="badge badge-blue">4</span></h3>
+                  <a href="purchase-orders.html?status=pending" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="purchase-orders.html?status=draft" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="inventory">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending deliveries <span class="badge badge-blue">4</span></h3>
+                  <a href="receiving.html" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <div class="relative">
+            <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+              <span class="sr-only">Account menu</span>
+              <span class="user-chip" data-user-chip>
+                <span class="avatar" aria-hidden="true" data-user-initials></span>
+                <span class="hidden text-left leading-tight sm:block">
+                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
+                  <span class="cell-xs" data-user-role></span>
+                </span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
+              <div class="border-b border-slate-100 px-4 py-3">
+                <p class="strong-sm" data-user-name></p>
+                <p class="text-[13px] text-slate-600" data-user-role></p>
+              </div>
+              <ul class="p-1">
+                <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
+                <li><button type="button" data-dialog-open="logout-dialog" class="menu-item w-full text-left"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Log out</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+      <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
+        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+        <div class="modal-foot">
+          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+          <button type="button" data-logout class="btn btn-primary">Log out</button>
+        </div>
+      </dialog>
+      <!-- END SHARED: topbar -->
+
+      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
+      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
+        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
+        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
+        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      </div>
+      <!-- END SHARED: flash -->
+
+      <main id="main" tabindex="-1" class="min-w-0 flex-1 outline-none">
+        <div class="page-wrap">
+          <div data-id="report-suggested-purchases">
+            <nav aria-label="Breadcrumb" class="no-print mb-2 text-sm text-slate-700">
+              <ol class="flex flex-wrap items-center gap-1">
+                <li class="flex items-center gap-1">
+                  <a href="reports.html" class="font-medium text-brand hover:underline">Reports</a>
+                </li>
+                <li class="flex items-center gap-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0 text-slate-500" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
+                  <span aria-current="page" class="font-semibold text-slate-900">Suggested Purchase Quantities</span>
+                </li>
+              </ol>
+            </nav>
+            <div class="page-head">
+              <div>
+                <p class="print-only text-sm font-semibold text-slate-700">Ace Bistro · Supply Chain Management System</p>
+                <h1 class="page-title">Suggested Purchase Quantities</h1>
+                <p class="page-lead">As of Friday, Nov 6, 2026, 11:30 AM · forecast for the next 7 days: average of the last 7 complete days × 7</p>
+              </div>
+              <div class="no-print flex flex-wrap gap-2">
+                <a href="demand.html" data-roles="admin procurement" class="btn btn-secondary">
+                  Open the live screen
+                </a>
+                <button type="button" data-print class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                  Print
+                </button>
+              </div>
+            </div>
+            <form method="get" action="report-suggested-purchases.html" class="card no-print mt-6 grid items-end gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]" aria-label="Report filters">
+              <div class="min-w-0">
+                <label for="suggested-purchases-f0" class="label">Supplier</label>
+                <select id="suggested-purchases-f0" name="supplier_id" class="input">
+                  <option selected>All suppliers</option>
+                  <option>Mercado Fresh Meats</option>
+                  <option>Blue Harbor Seafood</option>
+                  <option>Green Valley Produce</option>
+                  <option>Golden Grain Trading</option>
+                  <option>Metro Beverage &amp; Dairy Distributors</option>
+                </select>
+              </div>
+              <div class="min-w-0">
+                <label for="suggested-purchases-f1" class="label">Category</label>
+                <select id="suggested-purchases-f1" name="category" class="input">
+                  <option selected>All categories</option>
+                  <option>Meat &amp; Seafood</option>
+                  <option>Dairy &amp; Eggs</option>
+                  <option>Produce</option>
+                  <option>Dry Goods &amp; Condiments</option>
+                  <option>Beverages</option>
+                </select>
+              </div>
+              <div class="min-w-0">
+                <label for="suggested-purchases-f2" class="label">Forecast days</label>
+                <select id="suggested-purchases-f2" name="forecast_days" class="input">
+                  <option selected>7 days</option>
+                  <option>14 days</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-secondary">
+                Apply filters
+              </button>
+            </form>
+            <!-- SUMMARY RULES: Items = ingredients on the suggested list; Estimated cost = SUM(suggested quantity × latest unit cost) = ₱20,174; Urgent = forecast shortfall before the next delivery; Suppliers = distinct preferred suppliers (one purchase order each). The same total is on the Dashboard, Procurement and Demand Estimation. -->
+            <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Items to buy</p>
+                <p class="kpi-value mt-1">5</p>
+                <p class="page-lead">of 25 ingredients</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Estimated cost</p>
+                <p class="kpi-value mt-1">₱20,174</p>
+                <p class="page-lead">matches the purchase list</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Urgent</p>
+                <p class="kpi-value mt-1 tone-red">4</p>
+                <p class="page-lead">1 soon</p>
+              </div>
+              <div class="card p-4 md:p-6">
+                <p class="label-sm">Suppliers</p>
+                <p class="kpi-value mt-1">4</p>
+                <p class="page-lead">one purchase order each</p>
+              </div>
+            </div>
+
+<!-- BEGIN CALENDAR: suggested -->
+<section class="cal card mt-6 min-w-0" id="cal-suggested" data-cal data-scale="warn" aria-labelledby="cal-suggested-title">
+  <!--
+    CALENDAR DATA — Suggested purchases (value). Source: day-end value of the suggested purchase list (not stored in the ERD), one value per day (a day-end figure) for the last 365 days.
+    The block below is the whole contract; calendar.js draws the Year heat-map, the Month grid from it and adds up every figure.
+    start / today: first and last day · kind: "peak" (weeks and months combine days as a highest value) · unit: "peso" · steps: lower bounds of colour steps c1–c5 · label: tooltip text after the day
+    values: one number per day, oldest first.
+    The backend writes the same JSON from its query (a day with no row = 0). Full field list: the header of assets/js/calendar.js.
+  -->
+  <header class="card-head gap-y-3">
+    <div class="min-w-0 flex-1 basis-60"><h2 id="cal-suggested-title" class="card-title">Suggested purchases per day</h2><p class="page-lead">One day-end figure per day, in pesos: Nov 7, 2025 to Nov 6, 2026</p></div>
+    <div class="scroll-thin flex max-w-full flex-wrap items-center gap-2 overflow-x-auto" data-cal-controls></div>
+  </header>
+  <div class="card-body" data-cal-views></div>
+  <script type="application/json" data-cal-data>
+{
+  "name": "Suggested purchases (value)",
+  "start": "2025-11-07",
+  "today": "2026-11-06",
+  "kind": "peak",
+  "unit": "peso",
+  "noun": "suggested",
+  "steps": [7323,12323,17323,22323,27323],
+  "scale": "warn",
+  "label": {"one":"suggested purchases","many":"suggested purchases"},
+  "values": [
+    11408,9409,9296,9284,11744,14313,14276,14019,15959,11723,13079,10244,10544,7540,9277,8901,9865,10180,7368,6000,6700,9440,6000,7293,10801,13020,16347,14103,17844,15015,17925,
+    21430,18654,17442,16061,19573,22869,25760,26109,22496,20591,20644,19728,16639,15061,13447,14937,16256,18001,21521,22172,21033,20496,17418,20720,17027,17352,13580,14038,16423,12492,14410,
+    14585,11264,9847,6536,9241,8549,6000,8853,8940,12387,14978,14314,17272,16814,20517,18464,20933,21113,23762,20423,22773,19157,19485,21224,18650,15836,19845,18019,17814,19133,23005,
+    21458,17836,17906,20881,19433,18028,18339,16178,15483,15905,17741,16666,20373,17685,19775,20822,22667,23796,23848,20764,21462,17407,14019,10284,8722,8137,9319,6000,8006,11604,10128,
+    10726,13166,9305,13035,10762,12561,10679,11578,15561,16465,19494,15991,16373,13035,17084,15580,16377,15275,15926,18165,16739,19062,18948,19711,17162,13642,9698,10113,10221,7626,6000,
+    8155,7751,10851,11963,15247,11449,10434,12034,14573,12922,16844,16969,16931,13571,15791,11545,7133,10594,8691,10514,8704,11868,10719,13212,16338,15510,11060,13895,13151,15507,12322,
+    9886,11451,9497,9876,8847,12278,14204,10049,13576,15374,16530,20496,16491,16764,18954,21193,22179,23265,27400,30192,33704,30705,30232,26428,23013,19494,21770,21430,18492,19450,15214,
+    18653,21168,22900,24956,22408,24721,27235,27853,27106,25690,29643,29709,34000,32445,31021,30563,27892,25229,28164,24368,21406,20733,19803,19867,16836,13401,10341,12623,9638,10262,7100,
+    6209,6000,7754,10595,10663,11249,14549,10763,14097,13306,13628,15349,11485,13508,12832,12383,15876,16259,17419,21590,23394,26107,22516,23870,25683,22960,20468,22484,19407,22345,20736,
+    22934,22247,19201,19619,18139,18036,19539,15833,18390,17374,20163,21780,19769,21735,25503,27417,24093,26159,26360,23659,27624,27308,24254,21602,19179,18006,18641,18190,22431,25612,25619,
+    22902,24798,23479,22620,22879,26222,28717,28023,32053,29007,27050,23074,24998,24947,23352,25763,29186,28360,30672,30094,31482,32646,30590,33925,34000,32378,30836,29504,26536,23775,21170,
+    20768,21895,19579,21863,21786,19047,18128,16127,16191,19145,21448,17333,17282,18419,16168,16963,16927,13608,12977,15582,17717,20235,17367,20174
+  ]
+}
+  </script>
+</section>
+<!-- END CALENDAR -->
+<section class="card mt-6 min-w-0 break-inside-avoid" aria-labelledby="sug-chart">
+              <header class="card-head gap-y-2">
+                <div class="head-text">
+                  <h2 id="sug-chart" class="card-title">Estimated cost by supplier</h2>
+                </div>
+              </header>
+              <div class="px-4 pb-4 md:px-6 md:pb-6">
+                <!-- CHART DATA — Estimated purchase cost by supplier Mercado Fresh Meats · ₱12,040 · 1 item Green Valley Produce · ₱5,964 · 2 items Blue Harbor Seafood · ₱1,680 · 1 item Golden Grain Trading · ₱490 · 1 item Edit the numbers here and the matching points in BOTH svg variants (the data-tip text on each hit area is its tooltip), or let the backend draw the chart. -->
+                <div class="chart mt-3" tabindex="0" role="group" aria-label="Estimated purchase cost by supplier. Use the arrow keys to read each value, Escape to close.">
+                  <div class="min-[560px]:hidden">
+                    <svg viewBox="0 0 324 260" role="img" aria-label="Estimated purchase cost by supplier: Mercado Fresh Meats ₱12,040, Green Valley Produce ₱5,964, Blue Harbor Seafood ₱1,680, Golden Grain Trading ₱490. Total ₱20,174." class="fill-w">
+  <line class="axis" x1="52" x2="310" y1="226.0" y2="226.0"/><text x="44" y="230.0" text-anchor="end">₱0</text>
+  <line class="grid" x1="52" x2="310" y1="155.3" y2="155.3"/><text x="44" y="159.3" text-anchor="end">₱5K</text>
+  <line class="grid" x1="52" x2="310" y1="84.7" y2="84.7"/><text x="44" y="88.7" text-anchor="end">₱10K</text>
+  <line class="grid" x1="52" x2="310" y1="14.0" y2="14.0"/><text x="44" y="18.0" text-anchor="end">₱15K</text>
+  <text x="84.3" y="250" text-anchor="middle">Mercado</text>
+  <text x="148.8" y="250" text-anchor="middle">Green</text>
+  <text x="213.3" y="250" text-anchor="middle">Blue</text>
+  <text x="277.8" y="250" text-anchor="middle">Golden</text>
+  <g class="pt"><rect class="bar" x="64.3" y="55.8" width="40.0" height="170.2" rx="3"/><rect class="hit" x="52.0" y="14" width="64.5" height="212" data-tip="Mercado Fresh Meats · ₱12,040 · 1 item"/></g>
+  <g class="pt"><rect class="bar" x="128.8" y="141.7" width="40.0" height="84.3" rx="3"/><rect class="hit" x="116.5" y="14" width="64.5" height="212" data-tip="Green Valley Produce · ₱5,964 · 2 items"/></g>
+  <g class="pt"><rect class="bar" x="193.3" y="202.3" width="40.0" height="23.7" rx="3"/><rect class="hit" x="181.0" y="14" width="64.5" height="212" data-tip="Blue Harbor Seafood · ₱1,680 · 1 item"/></g>
+  <g class="pt"><rect class="bar" x="257.8" y="219.1" width="40.0" height="6.9" rx="3"/><rect class="hit" x="245.5" y="14" width="64.5" height="212" data-tip="Golden Grain Trading · ₱490 · 1 item"/></g>
+                    </svg>
+                  </div>
+                  <div class="hidden min-[560px]:block">
+                    <svg viewBox="0 0 689 260" role="img" aria-label="Estimated purchase cost by supplier: Mercado Fresh Meats ₱12,040, Green Valley Produce ₱5,964, Blue Harbor Seafood ₱1,680, Golden Grain Trading ₱490. Total ₱20,174." class="fill-w">
+  <line class="axis" x1="52" x2="675" y1="226.0" y2="226.0"/><text x="44" y="230.0" text-anchor="end">₱0</text>
+  <line class="grid" x1="52" x2="675" y1="155.3" y2="155.3"/><text x="44" y="159.3" text-anchor="end">₱5K</text>
+  <line class="grid" x1="52" x2="675" y1="84.7" y2="84.7"/><text x="44" y="88.7" text-anchor="end">₱10K</text>
+  <line class="grid" x1="52" x2="675" y1="14.0" y2="14.0"/><text x="44" y="18.0" text-anchor="end">₱15K</text>
+  <text x="129.9" y="250" text-anchor="middle">Mercado</text>
+  <text x="285.6" y="250" text-anchor="middle">Green</text>
+  <text x="441.4" y="250" text-anchor="middle">Blue</text>
+  <text x="597.1" y="250" text-anchor="middle">Golden</text>
+  <g class="pt"><rect class="bar" x="101.9" y="55.8" width="56.0" height="170.2" rx="3"/><rect class="hit" x="52.0" y="14" width="155.8" height="212" data-tip="Mercado Fresh Meats · ₱12,040 · 1 item"/></g>
+  <g class="pt"><rect class="bar" x="257.6" y="141.7" width="56.0" height="84.3" rx="3"/><rect class="hit" x="207.8" y="14" width="155.8" height="212" data-tip="Green Valley Produce · ₱5,964 · 2 items"/></g>
+  <g class="pt"><rect class="bar" x="413.4" y="202.3" width="56.0" height="23.7" rx="3"/><rect class="hit" x="363.5" y="14" width="155.8" height="212" data-tip="Blue Harbor Seafood · ₱1,680 · 1 item"/></g>
+  <g class="pt"><rect class="bar" x="569.1" y="219.1" width="56.0" height="6.9" rx="3"/><rect class="hit" x="519.3" y="14" width="155.8" height="212" data-tip="Golden Grain Trading · ₱490 · 1 item"/></g>
+                    </svg>
+                  </div>
+                  <div class="chart-tip" role="status" hidden></div>
+                </div>
+                <div class="sr-only">
+                  <table>
+                    <caption>Estimated purchase cost by supplier</caption>
+                    <thead>
+                      <tr><th scope="col">Item</th><th scope="col">Estimated cost</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">Mercado Fresh Meats</th><td>₱12,040</td></tr>
+                      <tr><th scope="row">Green Valley Produce</th><td>₱5,964</td></tr>
+                      <tr><th scope="row">Blue Harbor Seafood</th><td>₱1,680</td></tr>
+                      <tr><th scope="row">Golden Grain Trading</th><td>₱490</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <!-- Section: Suggested quantities and how they are worked out -->
+            <section class="card mt-6 min-w-0" aria-labelledby="sug-table">
+              <header class="card-head gap-y-2">
+                <div class="head-text">
+                  <h2 id="sug-table" class="card-title">Suggested quantities and how they are worked out</h2>
+                </div>
+              </header>
+              <div class="px-4 pb-4 md:px-6 md:pb-6">
+                <div class="scroll-thin -mx-4 mt-4 overflow-x-auto md:-mx-6" tabindex="0" role="region" aria-label="Suggested purchase quantities: forecast + safety stock − usable stock − incoming = quantity to buy, scrollable">
+                  <table class="table">
+                    <caption class="sr-only">Suggested purchase quantities: forecast + safety stock − usable stock − incoming = quantity to buy</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Ingredient</th>
+                        <th scope="col" class="num col-sm">Forecast</th>
+                        <th scope="col" class="num col-md">+ Safety</th>
+                        <th scope="col" class="num col-md">− Usable</th>
+                        <th scope="col" class="num col-md">− Incoming</th>
+                        <th scope="col" class="num">Buy</th>
+                        <th scope="col" class="num">Est. cost</th>
+                        <th scope="col">Tag</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Backend: one row for each of the replenishment rows (to buy first, then fewest days left, limit 12). Source: computed values, as the Demand Estimation page. Rule: forecast demand = average daily use of the last 7 complete days × forecast days; to_buy = forecast + safety stock − usable stock − incoming (never below 0); cost = to_buy × unit price. -->
+                      <tr data-id="ING-01">
+                        <th scope="row">Chicken breast<span class="cell-sub">Mercado Fresh Meats</span></th>
+                        <td class="num col-sm">56.91</td>
+                        <td class="num col-md">8.13</td>
+                        <td class="num col-md">9.7</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">56 kg</td>
+                        <td class="num">₱12,040</td>
+                        <td>
+                          <span class="badge badge-amber">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Soon
+                          </span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-05">
+                        <th scope="row">Shrimp<span class="cell-sub">Blue Harbor Seafood</span></th>
+                        <td class="num col-sm">3.15</td>
+                        <td class="num col-md">0.45</td>
+                        <td class="num col-md">0</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">4 kg</td>
+                        <td class="num">₱1,680</td>
+                        <td>
+                          <span class="badge badge-red">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            Urgent
+                          </span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-06">
+                        <th scope="row">Eggs<span class="cell-sub">Green Valley Produce</span></th>
+                        <td class="num col-sm">19.97</td>
+                        <td class="num col-md">2.85</td>
+                        <td class="num col-md">2.5</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">21 tray</td>
+                        <td class="num">₱5,544</td>
+                        <td>
+                          <span class="badge badge-red">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            Urgent
+                          </span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-12">
+                        <th scope="row">Tomato<span class="cell-sub">Green Valley Produce</span></th>
+                        <td class="num col-sm">5.24</td>
+                        <td class="num col-md">0.75</td>
+                        <td class="num col-md">0.6</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">6 kg</td>
+                        <td class="num">₱420</td>
+                        <td>
+                          <span class="badge badge-red">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            Urgent
+                          </span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-18">
+                        <th scope="row">Cooking oil<span class="cell-sub">Golden Grain Trading</span></th>
+                        <td class="num col-sm">37.73</td>
+                        <td class="num col-md">5.39</td>
+                        <td class="num col-md">8.3</td>
+                        <td class="num col-md">30</td>
+                        <td class="num font-semibold text-slate-900">5 L</td>
+                        <td class="num">₱490</td>
+                        <td>
+                          <span class="badge badge-red">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                            Urgent
+                          </span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-11">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Garlic</span>
+                          <span class="cell-sub">Green Valley Produce</span>
+                        </th>
+                        <td class="num col-sm">5.06</td>
+                        <td class="num col-md">0.72</td>
+                        <td class="num col-md">6.8</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.4 days left</span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-02">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Pork belly</span>
+                          <span class="cell-sub">Mercado Fresh Meats</span>
+                        </th>
+                        <td class="num col-sm">21</td>
+                        <td class="num col-md">3</td>
+                        <td class="num col-md">28.4</td>
+                        <td class="num col-md">15</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.5 days left</span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-04">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Bangus (milkfish)</span>
+                          <span class="cell-sub">Blue Harbor Seafood</span>
+                        </th>
+                        <td class="num col-sm">13.5</td>
+                        <td class="num col-md">1.93</td>
+                        <td class="num col-md">18.4</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.5 days left</span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-09">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Cheese</span>
+                          <span class="cell-sub">Metro Beverage &amp; Dairy Distributors</span>
+                        </th>
+                        <td class="num col-sm">3.27</td>
+                        <td class="num col-md">0.47</td>
+                        <td class="num col-md">4.6</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.8 days left</span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-10">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Onion</span>
+                          <span class="cell-sub">Green Valley Produce</span>
+                        </th>
+                        <td class="num col-sm">13.09</td>
+                        <td class="num col-md">1.87</td>
+                        <td class="num col-md">18.3</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.8 days left</span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-17">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Pancit canton noodles</span>
+                          <span class="cell-sub">Golden Grain Trading</span>
+                        </th>
+                        <td class="num col-sm">10.44</td>
+                        <td class="num col-md">1.49</td>
+                        <td class="num col-md">14.6</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.8 days left</span>
+                        </td>
+                      </tr>
+                      <tr data-id="ING-21">
+                        <th scope="row">
+                          <span class="font-medium text-slate-700">Salt</span>
+                          <span class="cell-sub">Golden Grain Trading</span>
+                        </th>
+                        <td class="num col-sm">0.71</td>
+                        <td class="num col-md">0.1</td>
+                        <td class="num col-md">1</td>
+                        <td class="num col-md">0</td>
+                        <td class="num font-semibold text-slate-900">
+                          <span class="font-normal text-slate-700">None needed</span>
+                        </td>
+                        <td class="num">—</td>
+                        <td>
+                          <span class="text-sm text-slate-700">9.9 days left</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="hint-3">Quantity to buy = forecast + safety stock (1 day) − usable stock − incoming, never below zero, rounded up to the buying step. The first 5 rows are on the purchase list; the other 7 are the OK ingredients with the fewest days of stock left. Quantities are in each ingredient's own unit (kg, tray, L, pcs).</p>
+              </div>
+            </section>
+            <p class="report-footer print-only">Ace Bistro Supply Chain Management System · Suggested Purchase Quantities · as of Friday, Nov 6, 2026, 11:30 AM</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
+  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
+  </div>
+
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/session.js"></script>
+  <script src="assets/js/dialogs.js"></script>
+  <script src="assets/js/forms.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/calendar.js"></script>
+</body>
+</html>

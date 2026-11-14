@@ -1,0 +1,1196 @@
+<!doctype html>
+<!--
+  PAGE: User Management (user-accounts.html)
+  FOR: Administrator.
+  PURPOSE: Create, edit, deactivate and reset staff accounts. Administrator only.
+  SECTIONS: Users · Add user · Edit Carl John · Edit Jun Santos · Edit Liza Ramos · Edit Mario Dela Cruz · Edit Carla Mendoza · Edit Paolo Garcia.
+  REPEATED MARKUP: 7 rows of the "users" list (each is documented by the comment above its first copy).
+  SCRIPTS: shell, session, dialogs, forms, filters (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+-->
+<html lang="en" class="h-full" data-page-roles="admin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User Management · Ace Bistro SCM</title>
+  <meta name="description" content="Ace Bistro Supply Chain Management System.">
+  <meta name="theme-color" content="#15803D">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
+       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
+       The backend replaces it with a server-side check. -->
+  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
+  if(!u||!u.role){location.replace('login.html');return}
+  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
+  d.setAttribute('data-role',u.role)})()</script>
+
+  <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <noscript><style>html body { visibility: visible !important; }</style></noscript>
+</head>
+<body class="h-full bg-page font-sans text-slate-800 antialiased">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div id="app" class="min-h-full lg:flex">
+    <!-- Mobile drawer overlay -->
+    <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
+
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+          <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="leading-tight">
+            <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
+            <span class="cell-xs">Supply Chain Management</span>
+          </span>
+        </a>
+        <button type="button" data-drawer-close class="btn btn-ghost btn-sm ml-auto !px-2 lg:hidden" aria-label="Close menu"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+      </div>
+      <nav aria-label="Main" class="scroll-thin flex-1 overflow-y-auto p-3">
+        <ul class="space-y-1">
+          <li data-roles="admin"><a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+          <li data-roles="admin cashier"><a href="orders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg><span>Order Records</span></a></li>
+          <li data-roles="admin cashier kitchen"><a href="menu.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span>Menu &amp; Recipes</span></a></li>
+          <li data-roles="admin kitchen inventory procurement"><a href="inventory.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span>Inventory</span></a></li>
+          <li data-roles="admin procurement"><a href="suppliers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg><span>Suppliers</span></a></li>
+          <li data-roles="admin procurement"><a href="procurement.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Procurement</span></a></li>
+          <li data-roles="inventory"><a href="receiving.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span>Receiving</span></a></li>
+          <li data-roles="admin procurement"><a href="demand.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>Demand Estimation</span></a></li>
+          <li data-roles="admin inventory procurement"><a href="reports.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Reports</span></a></li>
+          <li data-roles="admin"><a href="user-accounts.html" aria-current="page" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>User Management</span></a></li>
+          <li data-roles="admin"><a href="settings.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a></li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- END SHARED: sidebar -->
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
+      <header id="topbar" class="no-print app-topbar">
+        <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+          <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
+          <span class="hidden strong-sm xs:inline">Ace Bistro</span>
+        </a>
+        <div class="ml-auto flex items-center gap-1 sm:gap-2">
+          <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+          <div class="relative" data-roles="admin kitchen inventory procurement">
+            <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              <span class="hidden sm:inline">Alerts</span>
+              <span data-roles="admin inventory procurement" class="alert-count" aria-label="13 alerts">13</span>
+              <span data-roles="kitchen" class="alert-count" aria-label="9 alerts">9</span>
+            </button>
+            <div id="alerts-panel" class="popover hidden absolute right-0 top-full z-30 mt-2 w-[min(92vw,380px)]" role="region" aria-label="Alerts">
+              <div class="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+                <p class="px-4 py-3 strong-sm">Needs attention</p>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Low stock <span class="badge badge-amber">5</span></h3>
+                  <a href="inventory.html?status=below" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=out" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Shrimp</span><span class="note-block">Out of stock</span></span>
+                    <span class="badge badge-out shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Out</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Tomato</span><span class="note-block">0.6 kg left · reorder at 2</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=critical" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Eggs</span><span class="note-block">2.5 tray (30 pcs) left · reorder at 7</span></span>
+                    <span class="badge badge-red shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Critical</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 2 more</p>
+              </div>
+              <div class="px-4 py-3">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Near expiry <span class="badge badge-amber">4</span></h3>
+                  <a href="inventory.html?status=near" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Bangus (milkfish)</span><span class="note-block">3.7 kg · expires tomorrow</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Ground beef</span><span class="note-block">9.9 kg · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                  <li><a href="inventory.html?status=near" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">Fresh milk</span><span class="note-block">5.1 L · expires in 2 days</span></span>
+                    <span class="badge badge-amber shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Expiring</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="admin procurement">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending purchase orders <span class="badge badge-blue">4</span></h3>
+                  <a href="purchase-orders.html?status=pending" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="purchase-orders.html?status=draft" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="purchase-orders.html?status=sent" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              <div class="px-4 py-3" data-roles="inventory">
+                <div class="row-between">
+                  <h3 class="sec-title"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 text-blue-700" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Pending deliveries <span class="badge badge-blue">4</span></h3>
+                  <a href="receiving.html" class="link-sm">View all</a>
+                </div>
+                <ul class="mt-2 space-y-1">
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0033 · Golden Grain Trading</span><span class="note-block">Not sent yet</span></span>
+                    <span class="badge badge-slate shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>Draft</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0032 · Mercado Fresh Meats</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                  <li><a href="receiving.html" class="alert-row">
+                    <span class="min-w-0"><span class="cell-main">PO-2026-0031 · Golden Grain Trading</span><span class="note-block">Expected Nov 7</span></span>
+                    <span class="badge badge-blue shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Sent</span>
+                  </a></li>
+                </ul>
+                <p class="hint">+ 1 more</p>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <div class="relative">
+            <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
+              <span class="sr-only">Account menu</span>
+              <span class="user-chip" data-user-chip>
+                <span class="avatar" aria-hidden="true" data-user-initials></span>
+                <span class="hidden text-left leading-tight sm:block">
+                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
+                  <span class="cell-xs" data-user-role></span>
+                </span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
+              <div class="border-b border-slate-100 px-4 py-3">
+                <p class="strong-sm" data-user-name></p>
+                <p class="text-[13px] text-slate-600" data-user-role></p>
+              </div>
+              <ul class="p-1">
+                <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
+                <li><button type="button" data-dialog-open="logout-dialog" class="menu-item w-full text-left"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Log out</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+      <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
+        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+        <div class="modal-foot">
+          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+          <button type="button" data-logout class="btn btn-primary">Log out</button>
+        </div>
+      </dialog>
+      <!-- END SHARED: topbar -->
+
+      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
+      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
+        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
+        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
+        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      </div>
+      <!-- END SHARED: flash -->
+
+      <main id="main" tabindex="-1" class="min-w-0 flex-1 outline-none">
+        <div class="page-wrap">
+          <div>
+            <div class="page-head">
+              <div>
+                <h1 class="page-title">User Management</h1>
+                <p class="page-lead">Create, edit, deactivate and reset staff accounts. Administrator only.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <a href="role-permissions.html" class="btn btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mr-2" aria-hidden="true" focusable="false"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+                  Role permissions
+                </a>
+                <button type="button" data-dialog-open="add-user" class="btn btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mr-2" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                  Add user
+                </button>
+              </div>
+            </div>
+            <p class="mt-6 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0 mt-0.5" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <span>Passwords are never shown. They are stored as a hash (<code>users.password_hash</code>), so a forgotten password is replaced with a new one (key button), never looked up. Only the Administrator / Owner can open this page.</span>
+            </p>
+            <!-- Section: Users -->
+            <section class="card mt-6 min-w-0" aria-labelledby="users-title">
+              <header class="card-head gap-y-2">
+                <div class="head-text">
+                  <h2 id="users-title" class="card-title">Users</h2>
+                </div>
+              </header>
+              <div class="card-body">
+                <div class="flex flex-wrap items-end gap-3">
+                  <div class="min-w-0 flex-1 basis-60">
+                    <label for="user-search" class="label">Search users</label>
+                    <div class="flex gap-2">
+                      <input id="user-search" name="q" type="search" form="filter-users" data-search-in="users" autocomplete="off" placeholder="Name or username" class="input min-w-0">
+                      <button type="submit" form="filter-users" class="btn btn-secondary shrink-0">Search</button>
+                    </div>
+                  </div>
+                  <div class="scroll-thin max-w-full overflow-x-auto">
+                    <p class="label">Role</p>
+                    <form id="filter-users" method="get" action="user-accounts.html"></form>
+                    <div class="seg" role="group" aria-label="Role filter">
+                      <button type="submit" form="filter-users" name="role" value="all" aria-pressed="true" data-filter-group="users" data-filter-value="all">All (7)</button>
+                      <button type="submit" form="filter-users" name="role" value="admin" aria-pressed="false" data-filter-group="users" data-filter-value="admin">Admin (1)</button>
+                      <button type="submit" form="filter-users" name="role" value="cashier" aria-pressed="false" data-filter-group="users" data-filter-value="cashier">Cashier (2)</button>
+                      <button type="submit" form="filter-users" name="role" value="kitchen" aria-pressed="false" data-filter-group="users" data-filter-value="kitchen">Kitchen (2)</button>
+                      <button type="submit" form="filter-users" name="role" value="inventory" aria-pressed="false" data-filter-group="users" data-filter-value="inventory">Inventory (1)</button>
+                      <button type="submit" form="filter-users" name="role" value="procurement" aria-pressed="false" data-filter-group="users" data-filter-value="procurement">Procurement (1)</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="scroll-thin -mx-4 mt-4 overflow-x-auto md:-mx-6" tabindex="0" role="region" aria-label="Users of the Ace Bistro SCM System, scrollable">
+                  <table class="table">
+                    <caption class="sr-only">Users of the Ace Bistro SCM System</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col" class="col-sm">Username</th>
+                        <th scope="col" class="col-md">Role</th>
+                        <th scope="col" class="col-sm">Status</th>
+                        <th scope="col" class="hidden lg:table-cell">Last login</th>
+                        <th scope="col" class="text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Backend: one row for each of the users (by name). Source: user_account. Rule: there is no derived value except the active/inactive badge, which is users.is_active (EXTRA). -->
+                      <tr data-id="USR-01" data-filter-in="users" data-filter-key="admin" data-search="carl john carljohn administrator / owner">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              CJ
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Carl John <span class="font-normal text-slate-600">(you)</span></span>
+                              <span class="cell-sub sm:hidden">carljohn · Admin</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-brand">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                  Active
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">carljohn</td>
+                        <td class="col-md">Administrator / Owner</td>
+                        <td class="col-sm">
+                          <span class="badge badge-brand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            Active
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-11-06T08:02">Nov 6, 8:02 AM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-01" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Carl John" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-01" data-fill-name="Carl John" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Carl John" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr data-id="USR-02" data-filter-in="users" data-filter-key="cashier" data-search="jun santos jsantos cashier / service staff">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              JS
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Jun Santos</span>
+                              <span class="cell-sub sm:hidden">jsantos · Cashier</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-brand">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                  Active
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">jsantos</td>
+                        <td class="col-md">Cashier / Service Staff</td>
+                        <td class="col-sm">
+                          <span class="badge badge-brand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            Active
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-11-06T09:45">Nov 6, 9:45 AM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-02" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Jun Santos" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-02" data-fill-name="Jun Santos" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Jun Santos" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-deactivate" data-fill-id="USR-02" data-fill-name="Jun Santos" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Deactivate Jun Santos" title="Deactivate">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-delete" data-fill-id="USR-02" data-fill-name="Jun Santos" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2 text-red-700" aria-label="Delete Jun Santos" title="Delete">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr data-id="USR-03" data-filter-in="users" data-filter-key="cashier" data-search="liza ramos lramos cashier / service staff">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              LR
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Liza Ramos</span>
+                              <span class="cell-sub sm:hidden">lramos · Cashier</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-brand">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                  Active
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">lramos</td>
+                        <td class="col-md">Cashier / Service Staff</td>
+                        <td class="col-sm">
+                          <span class="badge badge-brand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            Active
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-11-05T17:58">Nov 5, 5:58 PM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-03" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Liza Ramos" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-03" data-fill-name="Liza Ramos" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Liza Ramos" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-deactivate" data-fill-id="USR-03" data-fill-name="Liza Ramos" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Deactivate Liza Ramos" title="Deactivate">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-delete" data-fill-id="USR-03" data-fill-name="Liza Ramos" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2 text-red-700" aria-label="Delete Liza Ramos" title="Delete">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr data-id="USR-04" data-filter-in="users" data-filter-key="kitchen" data-search="mario dela cruz mdelacruz kitchen staff / cook">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              MD
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Mario Dela Cruz</span>
+                              <span class="cell-sub sm:hidden">mdelacruz · Kitchen</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-brand">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                  Active
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">mdelacruz</td>
+                        <td class="col-md">Kitchen Staff / Cook</td>
+                        <td class="col-sm">
+                          <span class="badge badge-brand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            Active
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-11-06T08:15">Nov 6, 8:15 AM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-04" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Mario Dela Cruz" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-04" data-fill-name="Mario Dela Cruz" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Mario Dela Cruz" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-deactivate" data-fill-id="USR-04" data-fill-name="Mario Dela Cruz" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Deactivate Mario Dela Cruz" title="Deactivate">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-delete" data-fill-id="USR-04" data-fill-name="Mario Dela Cruz" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2 text-red-700" aria-label="Delete Mario Dela Cruz" title="Delete">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr data-id="USR-05" data-filter-in="users" data-filter-key="inventory" data-search="carla mendoza cmendoza inventory staff">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              CM
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Carla Mendoza</span>
+                              <span class="cell-sub sm:hidden">cmendoza · Inventory</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-brand">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                  Active
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">cmendoza</td>
+                        <td class="col-md">Inventory Staff</td>
+                        <td class="col-sm">
+                          <span class="badge badge-brand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            Active
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-11-06T08:40">Nov 6, 8:40 AM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-05" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Carla Mendoza" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-05" data-fill-name="Carla Mendoza" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Carla Mendoza" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-deactivate" data-fill-id="USR-05" data-fill-name="Carla Mendoza" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Deactivate Carla Mendoza" title="Deactivate">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-delete" data-fill-id="USR-05" data-fill-name="Carla Mendoza" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2 text-red-700" aria-label="Delete Carla Mendoza" title="Delete">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr data-id="USR-06" data-filter-in="users" data-filter-key="procurement" data-search="paolo garcia pgarcia procurement officer">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              PG
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Paolo Garcia</span>
+                              <span class="cell-sub sm:hidden">pgarcia · Procurement</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-brand">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                  Active
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">pgarcia</td>
+                        <td class="col-md">Procurement Officer</td>
+                        <td class="col-sm">
+                          <span class="badge badge-brand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            Active
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-11-05T15:20">Nov 5, 3:20 PM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-06" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Paolo Garcia" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-06" data-fill-name="Paolo Garcia" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Paolo Garcia" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-deactivate" data-fill-id="USR-06" data-fill-name="Paolo Garcia" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Deactivate Paolo Garcia" title="Deactivate">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-delete" data-fill-id="USR-06" data-fill-name="Paolo Garcia" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2 text-red-700" aria-label="Delete Paolo Garcia" title="Delete">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr data-id="USR-07" data-filter-in="users" data-filter-key="kitchen" data-search="tessa villanueva tvillanueva kitchen staff / cook">
+                        <th scope="row">
+                          <span class="flex items-center gap-3">
+                            <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
+                              TV
+                            </span>
+                            <span class="min-w-0">
+                              <span class="block font-semibold text-slate-900">Tessa Villanueva</span>
+                              <span class="cell-sub sm:hidden">tvillanueva · Kitchen</span>
+                              <span class="mt-1 block sm:hidden">
+                                <span class="badge badge-slate">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                                  Inactive
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </th>
+                        <td class="col-sm">tvillanueva</td>
+                        <td class="col-md">Kitchen Staff / Cook</td>
+                        <td class="col-sm">
+                          <span class="badge badge-slate">
+                            <svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                            Inactive
+                          </span>
+                        </td>
+                        <td class="hidden lg:table-cell">
+                          <time datetime="2026-10-12T16:05">Oct 12, 4:05 PM</time>
+                        </td>
+                        <td>
+                          <div class="flex justify-end gap-2">
+                            <button type="button" data-dialog-open="edit-USR-07" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Edit Tessa Villanueva" title="Edit">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+                            </button>
+                            <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-07" data-fill-name="Tessa Villanueva" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Tessa Villanueva" title="Reset password">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </button>
+                            <form id="users-form-2" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-reactivated">
+                              <input type="hidden" name="user_id" value="USR-07">
+                              <input type="hidden" name="is_active" value="1">
+                              <button type="submit" class="btn btn-secondary btn-sm !min-h-[44px]" aria-label="Reactivate Tessa Villanueva">
+                                Reactivate
+                              </button>
+                            </form>
+                            <button type="button" data-dialog-open="dlg-delete" data-fill-id="USR-07" data-fill-name="Tessa Villanueva" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2 text-red-700" aria-label="Delete Tessa Villanueva" title="Delete">
+                              <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p data-empty-for="users" hidden class="mt-3 rounded-md border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-700">No user matches this search and role.</p>
+                <p class="hint-3">Deactivating keeps the person's history (orders, stock entries, purchase orders) but blocks the login. Delete only works for an account that never recorded anything; otherwise deactivate it.</p>
+              </div>
+            </section>
+            <dialog id="add-user" class="modal modal-lg" aria-labelledby="add-user-title">
+              <div class="modal-head">
+                <h2 id="add-user-title" class="title-lg">Add user</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="add-user-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-added">
+                <div class="form-error" role="alert" id="add-user-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="add-user-name" class="label">Full name</label>
+                      <input id="add-user-name" name="name" type="text" autocomplete="off" class="input" value placeholder="e.g. Ana Reyes" required maxlength="120" aria-describedby="add-user-name-error">
+                      <p class="field-error" id="add-user-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="add-user-username" class="label">Username</label>
+                      <input id="add-user-username" name="username" type="text" autocomplete="off" class="input" value placeholder="e.g. carljohn2" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="add-user-username-error">
+                      <p class="field-error" id="add-user-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="add-user-role" class="label">Role</label>
+                      <select id="add-user-role" name="role" class="input" required aria-describedby="add-user-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier" selected>Cashier / Service Staff</option>
+                        <option value="kitchen">Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="add-user-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label for="add-user-password" class="label">Temporary password</label>
+                      <div class="flex gap-2">
+                        <input id="add-user-password" name="password" type="password" autocomplete="new-password" class="input" value aria-describedby="add-user-password-hint" required minlength="8" maxlength="72">
+                        <button type="button" data-toggle-password aria-controls="add-user-password" aria-pressed="false" class="btn btn-secondary shrink-0">
+                          Show
+                        </button>
+                      </div>
+                      <p id="add-user-password-hint" class="mt-1 text-[13px] text-slate-600">At least 8 characters.</p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Not sure which role fits? See <a href="role-permissions.html" class="link">what each role can do</a>.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Add user
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-01" class="modal modal-lg" aria-labelledby="edit-USR-01-title" data-id="USR-01">
+              <div class="modal-head">
+                <h2 id="edit-USR-01-title" class="title-lg">Edit Carl John</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-01-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-01-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-01">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-01-name" class="label">Full name</label>
+                      <input id="edit-USR-01-name" name="name" type="text" autocomplete="off" class="input" value="Carl John" required maxlength="120" aria-describedby="edit-USR-01-name-error">
+                      <p class="field-error" id="edit-USR-01-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-01-username" class="label">Username</label>
+                      <input id="edit-USR-01-username" name="username" type="text" autocomplete="off" class="input" value="carljohn" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-01-username-error">
+                      <p class="field-error" id="edit-USR-01-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-01-role" class="label">Role</label>
+                      <select id="edit-USR-01-role" name="role" class="input" disabled required aria-describedby="edit-USR-01-role-error">
+                        <option value="admin" selected>Administrator / Owner</option>
+                        <option value="cashier">Cashier / Service Staff</option>
+                        <option value="kitchen">Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-01-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-01
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">This is the account you are signed in with, so its role cannot be changed and it cannot be deactivated or deleted. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-02" class="modal modal-lg" aria-labelledby="edit-USR-02-title" data-id="USR-02">
+              <div class="modal-head">
+                <h2 id="edit-USR-02-title" class="title-lg">Edit Jun Santos</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-02-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-02-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-02">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-02-name" class="label">Full name</label>
+                      <input id="edit-USR-02-name" name="name" type="text" autocomplete="off" class="input" value="Jun Santos" required maxlength="120" aria-describedby="edit-USR-02-name-error">
+                      <p class="field-error" id="edit-USR-02-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-02-username" class="label">Username</label>
+                      <input id="edit-USR-02-username" name="username" type="text" autocomplete="off" class="input" value="jsantos" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-02-username-error">
+                      <p class="field-error" id="edit-USR-02-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-02-role" class="label">Role</label>
+                      <select id="edit-USR-02-role" name="role" class="input" required aria-describedby="edit-USR-02-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier" selected>Cashier / Service Staff</option>
+                        <option value="kitchen">Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-02-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-02
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Changing the role changes what this person sees at the next login. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-03" class="modal modal-lg" aria-labelledby="edit-USR-03-title" data-id="USR-03">
+              <div class="modal-head">
+                <h2 id="edit-USR-03-title" class="title-lg">Edit Liza Ramos</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-03-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-03-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-03">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-03-name" class="label">Full name</label>
+                      <input id="edit-USR-03-name" name="name" type="text" autocomplete="off" class="input" value="Liza Ramos" required maxlength="120" aria-describedby="edit-USR-03-name-error">
+                      <p class="field-error" id="edit-USR-03-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-03-username" class="label">Username</label>
+                      <input id="edit-USR-03-username" name="username" type="text" autocomplete="off" class="input" value="lramos" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-03-username-error">
+                      <p class="field-error" id="edit-USR-03-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-03-role" class="label">Role</label>
+                      <select id="edit-USR-03-role" name="role" class="input" required aria-describedby="edit-USR-03-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier" selected>Cashier / Service Staff</option>
+                        <option value="kitchen">Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-03-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-03
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Changing the role changes what this person sees at the next login. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-04" class="modal modal-lg" aria-labelledby="edit-USR-04-title" data-id="USR-04">
+              <div class="modal-head">
+                <h2 id="edit-USR-04-title" class="title-lg">Edit Mario Dela Cruz</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-04-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-04-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-04">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-04-name" class="label">Full name</label>
+                      <input id="edit-USR-04-name" name="name" type="text" autocomplete="off" class="input" value="Mario Dela Cruz" required maxlength="120" aria-describedby="edit-USR-04-name-error">
+                      <p class="field-error" id="edit-USR-04-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-04-username" class="label">Username</label>
+                      <input id="edit-USR-04-username" name="username" type="text" autocomplete="off" class="input" value="mdelacruz" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-04-username-error">
+                      <p class="field-error" id="edit-USR-04-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-04-role" class="label">Role</label>
+                      <select id="edit-USR-04-role" name="role" class="input" required aria-describedby="edit-USR-04-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier">Cashier / Service Staff</option>
+                        <option value="kitchen" selected>Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-04-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-04
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Changing the role changes what this person sees at the next login. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-05" class="modal modal-lg" aria-labelledby="edit-USR-05-title" data-id="USR-05">
+              <div class="modal-head">
+                <h2 id="edit-USR-05-title" class="title-lg">Edit Carla Mendoza</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-05-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-05-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-05">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-05-name" class="label">Full name</label>
+                      <input id="edit-USR-05-name" name="name" type="text" autocomplete="off" class="input" value="Carla Mendoza" required maxlength="120" aria-describedby="edit-USR-05-name-error">
+                      <p class="field-error" id="edit-USR-05-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-05-username" class="label">Username</label>
+                      <input id="edit-USR-05-username" name="username" type="text" autocomplete="off" class="input" value="cmendoza" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-05-username-error">
+                      <p class="field-error" id="edit-USR-05-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-05-role" class="label">Role</label>
+                      <select id="edit-USR-05-role" name="role" class="input" required aria-describedby="edit-USR-05-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier">Cashier / Service Staff</option>
+                        <option value="kitchen">Kitchen Staff / Cook</option>
+                        <option value="inventory" selected>Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-05-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-05
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Changing the role changes what this person sees at the next login. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-06" class="modal modal-lg" aria-labelledby="edit-USR-06-title" data-id="USR-06">
+              <div class="modal-head">
+                <h2 id="edit-USR-06-title" class="title-lg">Edit Paolo Garcia</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-06-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-06-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-06">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-06-name" class="label">Full name</label>
+                      <input id="edit-USR-06-name" name="name" type="text" autocomplete="off" class="input" value="Paolo Garcia" required maxlength="120" aria-describedby="edit-USR-06-name-error">
+                      <p class="field-error" id="edit-USR-06-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-06-username" class="label">Username</label>
+                      <input id="edit-USR-06-username" name="username" type="text" autocomplete="off" class="input" value="pgarcia" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-06-username-error">
+                      <p class="field-error" id="edit-USR-06-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-06-role" class="label">Role</label>
+                      <select id="edit-USR-06-role" name="role" class="input" required aria-describedby="edit-USR-06-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier">Cashier / Service Staff</option>
+                        <option value="kitchen">Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement" selected>Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-06-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-06
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Changing the role changes what this person sees at the next login. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="edit-USR-07" class="modal modal-lg" aria-labelledby="edit-USR-07-title" data-id="USR-07">
+              <div class="modal-head">
+                <h2 id="edit-USR-07-title" class="title-lg">Edit Tessa Villanueva</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="edit-USR-07-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+                <div class="form-error" role="alert" id="edit-USR-07-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-4">
+                  <input type="hidden" name="user_id" value="USR-07">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label for="edit-USR-07-name" class="label">Full name</label>
+                      <input id="edit-USR-07-name" name="name" type="text" autocomplete="off" class="input" value="Tessa Villanueva" required maxlength="120" aria-describedby="edit-USR-07-name-error">
+                      <p class="field-error" id="edit-USR-07-name-error" hidden>Enter the full name (120 characters at most).</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-07-username" class="label">Username</label>
+                      <input id="edit-USR-07-username" name="username" type="text" autocomplete="off" class="input" value="tvillanueva" required maxlength="60" pattern="[A-Za-z0-9._\-]{3,60}" aria-describedby="edit-USR-07-username-error">
+                      <p class="field-error" id="edit-USR-07-username-error" hidden>Use 3 to 60 letters, numbers, dots, dashes or underscores.</p>
+                    </div>
+                    <div>
+                      <label for="edit-USR-07-role" class="label">Role</label>
+                      <select id="edit-USR-07-role" name="role" class="input" required aria-describedby="edit-USR-07-role-error">
+                        <option value="admin">Administrator / Owner</option>
+                        <option value="cashier">Cashier / Service Staff</option>
+                        <option value="kitchen" selected>Kitchen Staff / Cook</option>
+                        <option value="inventory">Inventory Staff</option>
+                        <option value="procurement">Procurement Officer</option>
+                      </select>
+                      <p class="field-error" id="edit-USR-07-role-error" hidden>Choose a role.</p>
+                    </div>
+                    <div>
+                      <p class="label">User ID</p>
+                      <p class="flex min-h-[44px] items-center text-sm text-slate-800">
+                        USR-07
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-[13px] text-slate-600">Changing the role changes what this person sees at the next login. The password is not shown anywhere; use the key button in the list to reset it.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Save changes
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="dlg-reset-password" class="modal" aria-labelledby="dlg-reset-password-title">
+              <div class="modal-head">
+                <h2 id="dlg-reset-password-title" class="title-lg">Reset password</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="dlg-reset-password-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-password-reset">
+                <div class="form-error" role="alert" id="dlg-reset-password-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
+                <div class="modal-body space-y-3">
+                  <input type="hidden" name="user_id" value data-fill-input="id">
+                  <p class="text-sm text-slate-700">Set a new password for <strong data-fill="name">Jun Santos</strong>. The old one stops working at once.</p>
+                  <div class="grid gap-4">
+                    <div class="sm:col-span-2">
+                      <label for="reset-password" class="label">New password</label>
+                      <div class="flex gap-2">
+                        <input id="reset-password" name="password" type="password" autocomplete="new-password" class="input" value aria-describedby="reset-password-hint" required minlength="8" maxlength="72">
+                        <button type="button" data-toggle-password aria-controls="reset-password" aria-pressed="false" class="btn btn-secondary shrink-0">
+                          Show
+                        </button>
+                      </div>
+                      <p id="reset-password-hint" class="mt-1 text-[13px] text-slate-600">At least 8 characters. Tell the person in private.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Reset password
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="dlg-deactivate" class="modal" aria-labelledby="dlg-deactivate-title">
+              <div class="modal-head">
+                <h2 id="dlg-deactivate-title" class="title-lg">Deactivate this user?</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="dlg-deactivate-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-deactivated">
+                <div class="modal-body space-y-3">
+                  <input type="hidden" name="user_id" value data-fill-input="id">
+                  <p class="text-sm text-slate-700"><strong data-fill="name">Jun Santos</strong> will no longer be able to log in. Their orders and history stay in the system, and you can reactivate the account later.</p>
+                  <input type="hidden" name="is_active" value="0">
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-danger">
+                    Deactivate user
+                  </button>
+                </div>
+              </form>
+            </dialog>
+            <dialog id="dlg-delete" class="modal" aria-labelledby="dlg-delete-title">
+              <div class="modal-head">
+                <h2 id="dlg-delete-title" class="title-lg">Delete this user?</h2>
+                <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog">
+                  <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <form id="dlg-delete-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-deleted">
+                <div class="modal-body space-y-3">
+                  <input type="hidden" name="user_id" value data-fill-input="id">
+                  <p class="text-sm text-slate-700">This permanently deletes <strong data-fill="name">Jun Santos</strong> and cannot be undone.</p>
+                  <p class="text-sm text-slate-700">An account that already recorded orders, stock entries or purchase orders cannot be deleted. Deactivate it instead.</p>
+                </div>
+                <div class="modal-foot">
+                  <button type="button" data-dialog-close class="btn btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-danger">
+                    Delete user
+                  </button>
+                </div>
+              </form>
+            </dialog>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
+  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
+    <div id="toast-user-added" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">User added</p>
+        <p class="mt-0.5 text-sm text-slate-600">They can log in with the temporary password.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-user-saved" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">Changes saved</p>
+
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-password-reset" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">Password reset</p>
+        <p class="mt-0.5 text-sm text-slate-600">The old password no longer works.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-user-deactivated" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">User deactivated</p>
+        <p class="mt-0.5 text-sm text-slate-600">Their history stays in the system.</p>
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-user-reactivated" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">User reactivated</p>
+
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="toast-user-deleted" class="toast toast-success pointer-events-auto hidden">
+      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+      <div class="min-w-0 flex-1">
+        <p class="font-semibold text-slate-900">User deleted</p>
+
+      </div>
+      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/session.js"></script>
+  <script src="assets/js/dialogs.js"></script>
+  <script src="assets/js/forms.js"></script>
+  <script src="assets/js/filters.js"></script>
+</body>
+</html>

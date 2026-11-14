@@ -1,0 +1,12 @@
+{
+  "name": "ace-bistro-scm-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Builds assets/css/tailwind.css from the pages. Not needed to run the site.",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.cjs -i input.css -o ../assets/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
