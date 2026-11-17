@@ -3,8 +3,9 @@
   PAGE: Log in (login.html)
   FOR: everyone (no sign-in needed).
   PURPOSE: Use the username and password the Administrator / Owner gave you.
-  SCRIPTS: shell, test-accounts, session, forms, login (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
-  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+  SCRIPTS: shell, forms (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes (the server writes data-role on <html> and prints the signed-in user); repeated markup is printed in a loop;
+    every date, time and figure is an example value (example "now": Friday 6 Nov 2026, 11:30 AM). Forms, filters and calculation rules are described in the comments below and in docs/BACKEND-HANDOFF.md.
 -->
 <html lang="en" class="h-full">
 <head>
@@ -24,7 +25,7 @@
   <link rel="stylesheet" href="assets/css/app.css">
   <link rel="stylesheet" href="assets/css/tailwind.css">
   </head>
-<body data-public class="min-h-full bg-page font-sans text-slate-800 antialiased">
+<body class="min-h-full bg-page font-sans text-slate-800 antialiased">
   <a href="#main" class="skip-link">Skip to main content</a>
   <main id="main" tabindex="-1" class="mx-auto flex min-h-screen max-w-md flex-col justify-center p-4 outline-none">
     <div class="flex items-center justify-center gap-3" aria-hidden="true">
@@ -34,11 +35,13 @@
     <section class="card mt-6 p-6" aria-labelledby="login-title">
       <h1 id="login-title" class="text-xl font-semibold text-slate-900">Log in</h1>
       <p class="page-lead">Use the username and password the Administrator / Owner gave you.</p>
+      <!-- Backend: after a failed POST /login, show the page again with "hidden" removed from the ONE alert that applies and the typed username kept in value:
+           empty (a field was left blank), invalid (wrong username or password; one message for both), locked (too many tries), expired (password must be changed). Never echo the password. -->
       <div data-login-alert="empty" hidden tabindex="-1" role="alert" class="mt-4 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 text-red-900 p-3 text-sm"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><div><p class="font-semibold">Enter your username and password.</p><p class="mt-0.5">Both fields are required.</p></div></div>
       <div data-login-alert="invalid" hidden tabindex="-1" role="alert" class="mt-4 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 text-red-900 p-3 text-sm"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><div><p class="font-semibold">Wrong username or password.</p><p class="mt-0.5">Check them and try again. Passwords are case-sensitive.</p></div></div>
       <div data-login-alert="locked" hidden tabindex="-1" role="alert" class="mt-4 flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 text-amber-900 p-3 text-sm"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div><p class="font-semibold">This account is locked or deactivated.</p><p class="mt-0.5">Ask the Administrator / Owner to unlock or reactivate it.</p></div></div>
       <div data-login-alert="expired" hidden tabindex="-1" role="alert" class="mt-4 flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 text-blue-900 p-3 text-sm"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><p class="font-semibold">Your session expired.</p><p class="mt-0.5">You were logged out after a period of no activity. Please log in again.</p></div></div>
-      <form method="post" action="login.html" data-login-form class="mt-4 space-y-4" novalidate>
+      <form method="post" action="/login" class="mt-4 space-y-4" novalidate>
         <div>
           <label for="login-username" class="label">Username</label>
           <input id="login-username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" class="input input-touch" value="">
@@ -56,9 +59,6 @@
     </section>
   </main>
   <script src="assets/js/shell.js"></script>
-  <script src="assets/js/test-accounts.js"></script>
-  <script src="assets/js/session.js"></script>
   <script src="assets/js/forms.js"></script>
-  <script src="assets/js/login.js"></script>
 </body>
 </html>

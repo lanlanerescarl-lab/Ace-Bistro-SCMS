@@ -2,13 +2,15 @@
 <!--
   PAGE: Menu & Recipes (menu.html)
   FOR: Administrator, Cashier, Kitchen Staff.
+  EXTRA (not in the proposal ERD): menu_item.image_path and the picture upload (field "image", JPEG, PNG or WebP, up to 2 MB; "remove_image" deletes the stored picture).
   PURPOSE: Dishes with their pictures and recipes; recipes drive stock use and demand.
   SECTIONS: Dishes · Add menu item · Delete this dish?.
-  REPEATED MARKUP: 15 rows of the "menu-cat" list; the shared template "dish-dialog"; the shared template "tpl-recipe-row" (each is documented by the comment above its first copy).
-  SCRIPTS: shell, session, dialogs, forms, rows, filters, row-dialog, menu-images (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
-  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+  REPEATED MARKUP: 15 dish rows (one per menu_item); the shared template "dish-dialog"; the shared template "tpl-recipe-row" (each is documented by the comment above its first copy).
+  SCRIPTS: shell, dialogs, forms, rows, row-dialog, menu-images (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes (the server writes data-role on <html> and prints the signed-in user); repeated markup is printed in a loop;
+    every date, time and figure is an example value (example "now": Friday 6 Nov 2026, 11:30 AM). Forms, filters and calculation rules are described in the comments below and in docs/BACKEND-HANDOFF.md.
 -->
-<html lang="en" class="h-full" data-page-roles="admin cashier kitchen">
+<html lang="en" class="h-full" data-role="admin" data-page-roles="admin cashier kitchen">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,13 +19,6 @@
   <meta name="theme-color" content="#15803D">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 
-  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
-       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
-       The backend replaces it with a server-side check. -->
-  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
-  if(!u||!u.role){location.replace('login.html');return}
-  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
-  d.setAttribute('data-role',u.role)})()</script>
 
   <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -32,7 +27,6 @@
   <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
   <link rel="stylesheet" href="assets/css/app.css">
   <link rel="stylesheet" href="assets/css/tailwind.css">
-  <noscript><style>html body { visibility: visible !important; }</style></noscript>
 </head>
 <body class="h-full bg-page font-sans text-slate-800 antialiased">
   <a href="#main" class="skip-link">Skip to main content</a>
@@ -41,10 +35,12 @@
     <!-- Mobile drawer overlay -->
     <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
 
-    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include.
+         The logo links to the signed-in role's first page: Administrator dashboard.html, Cashier orders.html, Kitchen and Inventory inventory.html, Procurement procurement.html, written by the server.
+         EXTRA (not in the proposal ERD): data-role on <html> (the signed-in role, written by the server) decides which data-roles items show; hiding is visual only, so the server must also check permissions. -->
     <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
       <div class="sidebar-head">
-        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+        <a href="dashboard.html" class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
           <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
           <span class="leading-tight">
             <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
@@ -75,13 +71,14 @@
       <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
       <header id="topbar" class="no-print app-topbar">
         <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
-        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+        <a href="dashboard.html" class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
           <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
           <span class="hidden strong-sm xs:inline">Ace Bistro</span>
         </a>
         <div class="ml-auto flex items-center gap-1 sm:gap-2">
           <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
-               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=.
+               EXTRA (not in the proposal ERD): the Alerts menu; its counts and rows come from the Inventory and Purchase Orders queries. -->
           <div class="relative" data-roles="admin kitchen inventory procurement">
             <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
               <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -179,23 +176,24 @@
               </div>
             </div>
           </div>
-          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <!-- Signed-in user. The server prints the name, initials and role label of the logged-in account (written here: Carl John, "CJ", Administrator / Owner; username carljohn on My account).
+               EXTRA (not in the proposal ERD): the user-chip menu (My account, Log out). -->
           <div class="relative">
             <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
               <span class="sr-only">Account menu</span>
-              <span class="user-chip" data-user-chip>
-                <span class="avatar" aria-hidden="true" data-user-initials></span>
+              <span class="user-chip">
+                <span class="avatar" aria-hidden="true">CJ</span>
                 <span class="hidden text-left leading-tight sm:block">
-                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
-                  <span class="cell-xs" data-user-role></span>
+                  <span class="block text-[13px] font-semibold text-slate-900">Carl John</span>
+                  <span class="cell-xs">Administrator / Owner</span>
                 </span>
               </span>
               <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
               <div class="border-b border-slate-100 px-4 py-3">
-                <p class="strong-sm" data-user-name></p>
-                <p class="text-[13px] text-slate-600" data-user-role></p>
+                <p class="strong-sm">Carl John</p>
+                <p class="text-[13px] text-slate-600">Administrator / Owner</p>
               </div>
               <ul class="p-1">
                 <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
@@ -205,21 +203,38 @@
           </div>
         </div>
       </header>
+      <!-- Log out: a confirm dialog. The form posts to /logout; the server ends the session and redirects to the login page. -->
       <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
-        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
-        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
-        <div class="modal-foot">
-          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
-          <button type="button" data-logout class="btn btn-primary">Log out</button>
-        </div>
+        <form method="post" action="/logout">
+          <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+          <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+          <div class="modal-foot">
+            <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+            <button type="submit" data-loading-text="Logging out…" class="btn btn-primary">Log out</button>
+          </div>
+        </form>
       </dialog>
       <!-- END SHARED: topbar -->
 
-      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
-      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
-        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
-        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
-        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      <!-- BEGIN SHARED: flash (one message after a save or an error. The server removes "hidden" from the variant that applies and fills in data-flash-text;
+           a success closes itself after 5 seconds, the others stay until dismissed. The backend turns this block into an include.
+           EXTRA (not in the proposal ERD): the flash message slot) -->
+      <div id="flash-slot" class="no-print toast-stack" role="status" aria-live="polite">
+        <div data-flash="success" hidden class="toast toast-success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          <div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Saved.</p><p class="mt-0.5 text-sm text-slate-600" data-flash-text></p></div>
+          <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div data-flash="error" hidden role="alert" class="toast toast-error">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-red-700" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          <div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Could not save.</p><p class="mt-0.5 text-sm text-slate-600" data-flash-text></p></div>
+          <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div data-flash="warning" hidden class="toast toast-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Please check.</p><p class="mt-0.5 text-sm text-slate-600" data-flash-text></p></div>
+          <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
       </div>
       <!-- END SHARED: flash -->
 
@@ -237,13 +252,14 @@
             <header class="card-head gap-y-2">
               <div class="head-text"><h2 id="menu-list-title" class="card-title">Dishes</h2></div>
               <div class="scroll-thin max-w-full overflow-x-auto">
-                <form id="filter-menu" method="get" action="menu.html" data-filter-form="menu-cat"></form>
+                <!-- Category filter. GET form filter-menu: category. Counts on the buttons = COUNT of menu_item rows per category (All = every dish, 15). -->
+                <form id="filter-menu" method="get" action="menu.html"></form>
                 <div class="seg" role="group" aria-label="Dish category">
-                  <button type="submit" form="filter-menu" name="category" value="all" aria-pressed="true" data-filter-group="menu-cat" data-filter-value="all">All (<span data-count="menu-cat:all">15</span>)</button>
-                  <button type="submit" form="filter-menu" name="category" value="Rice Meals" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Rice Meals">Rice Meals (<span data-count="menu-cat:Rice Meals">7</span>)</button>
-                  <button type="submit" form="filter-menu" name="category" value="Snacks &amp; Noodles" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Snacks &amp; Noodles">Snacks &amp; Noodles (<span data-count="menu-cat:Snacks &amp; Noodles">4</span>)</button>
-                  <button type="submit" form="filter-menu" name="category" value="Beverages" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Beverages">Beverages (<span data-count="menu-cat:Beverages">3</span>)</button>
-                  <button type="submit" form="filter-menu" name="category" value="Desserts" aria-pressed="false" data-filter-group="menu-cat" data-filter-value="Desserts">Desserts (<span data-count="menu-cat:Desserts">1</span>)</button>
+                  <button type="submit" form="filter-menu" name="category" value="all" aria-pressed="true">All (15)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Rice Meals" aria-pressed="false">Rice Meals (7)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Snacks &amp; Noodles" aria-pressed="false">Snacks &amp; Noodles (4)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Beverages" aria-pressed="false">Beverages (3)</button>
+                  <button type="submit" form="filter-menu" name="category" value="Desserts" aria-pressed="false">Desserts (1)</button>
                 </div>
               </div>
             </header>
@@ -276,7 +292,7 @@
                     The Ingredients column is the number of recipe entries; the badge is Unavailable (flag off or an ingredient out), "Only n left" (n ≤ 12) or Available.
                   -->
                   <tbody>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-01" data-title="Chicken Adobo Rice Meal" data-category="Rice Meals" data-price="120" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-01.svg" data-cost="₱57.96" data-servings="53" data-short="0" data-limited="chicken breast" data-recipe="ING-01|Chicken breast|0.18|kg|9.7|;ING-19|Soy sauce|0.03|L|11.7|;ING-20|Vinegar|0.02|L|7.3|;ING-11|Garlic|0.01|kg|6.8|;ING-10|Onion|0.02|kg|18.3|;ING-18|Cooking oil|0.02|L|8.3|;ING-15|Rice|0.2|kg|183|">
+                    <tr data-row data-code="MNU-01" data-title="Chicken Adobo Rice Meal" data-category="Rice Meals" data-price="120" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-01.svg" data-cost="₱57.96" data-servings="53" data-short="0" data-limited="chicken breast" data-recipe="ING-01|Chicken breast|0.18|kg|9.7|;ING-19|Soy sauce|0.03|L|11.7|;ING-20|Vinegar|0.02|L|7.3|;ING-11|Garlic|0.01|kg|6.8|;ING-10|Onion|0.02|kg|18.3|;ING-18|Cooking oil|0.02|L|8.3|;ING-15|Rice|0.2|kg|183|">
                       <td><img src="assets/img/dishes/mnu-01.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Chicken Adobo Rice Meal</span></th>
                       <td>Rice Meals</td>
@@ -287,7 +303,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Chicken Adobo Rice Meal">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-02" data-title="Pork Sisig Rice Meal" data-category="Rice Meals" data-price="140" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-02.svg" data-cost="₱92.51" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-02|Pork belly|0.2|kg|28.4|;ING-10|Onion|0.05|kg|18.3|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-18|Cooking oil|0.02|L|8.3|;ING-21|Salt|0.002|kg|1|;ING-15|Rice|0.2|kg|183|">
+                    <tr data-row data-code="MNU-02" data-title="Pork Sisig Rice Meal" data-category="Rice Meals" data-price="140" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-02.svg" data-cost="₱92.51" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-02|Pork belly|0.2|kg|28.4|;ING-10|Onion|0.05|kg|18.3|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-18|Cooking oil|0.02|L|8.3|;ING-21|Salt|0.002|kg|1|;ING-15|Rice|0.2|kg|183|">
                       <td><img src="assets/img/dishes/mnu-02.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Pork Sisig Rice Meal</span></th>
                       <td>Rice Meals</td>
@@ -298,7 +314,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Pork Sisig Rice Meal">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-03" data-title="Beef Tapsilog" data-category="Rice Meals" data-price="135" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-03.svg" data-cost="₱83.19" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-03|Ground beef|0.15|kg|49.4|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-11|Garlic|0.01|kg|6.8|;ING-19|Soy sauce|0.02|L|11.7|;ING-20|Vinegar|0.01|L|7.3|;ING-18|Cooking oil|0.03|L|8.3|;ING-15|Rice|0.2|kg|183|">
+                    <tr data-row data-code="MNU-03" data-title="Beef Tapsilog" data-category="Rice Meals" data-price="135" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-03.svg" data-cost="₱83.19" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-03|Ground beef|0.15|kg|49.4|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-11|Garlic|0.01|kg|6.8|;ING-19|Soy sauce|0.02|L|11.7|;ING-20|Vinegar|0.01|L|7.3|;ING-18|Cooking oil|0.03|L|8.3|;ING-15|Rice|0.2|kg|183|">
                       <td><img src="assets/img/dishes/mnu-03.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Beef Tapsilog</span></th>
                       <td>Rice Meals</td>
@@ -309,7 +325,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Beef Tapsilog">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-04" data-title="Fried Bangus Rice Meal" data-category="Rice Meals" data-price="150" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-04.svg" data-cost="₱66.10" data-servings="73" data-short="0" data-limited="bangus (milkfish)" data-recipe="ING-04|Bangus (milkfish)|0.25|kg|18.4|;ING-18|Cooking oil|0.05|L|8.3|;ING-15|Rice|0.2|kg|183|;ING-20|Vinegar|0.02|L|7.3|;ING-11|Garlic|0.01|kg|6.8|">
+                    <tr data-row data-code="MNU-04" data-title="Fried Bangus Rice Meal" data-category="Rice Meals" data-price="150" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-04.svg" data-cost="₱66.10" data-servings="73" data-short="0" data-limited="bangus (milkfish)" data-recipe="ING-04|Bangus (milkfish)|0.25|kg|18.4|;ING-18|Cooking oil|0.05|L|8.3|;ING-15|Rice|0.2|kg|183|;ING-20|Vinegar|0.02|L|7.3|;ING-11|Garlic|0.01|kg|6.8|">
                       <td><img src="assets/img/dishes/mnu-04.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Fried Bangus Rice Meal</span></th>
                       <td>Rice Meals</td>
@@ -320,7 +336,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Fried Bangus Rice Meal">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-05" data-title="Garlic Butter Shrimp Rice Meal" data-category="Rice Meals" data-price="220" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-05.svg" data-cost="₱94.96" data-servings="0" data-short="1" data-limited="shrimp" data-recipe="ING-05|Shrimp|0.15|kg|0|;ING-08|Butter|0.03|kg|1.9|;ING-11|Garlic|0.02|kg|6.8|;ING-18|Cooking oil|0.02|L|8.3|;ING-15|Rice|0.2|kg|183|">
+                    <tr data-row data-code="MNU-05" data-title="Garlic Butter Shrimp Rice Meal" data-category="Rice Meals" data-price="220" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-05.svg" data-cost="₱94.96" data-servings="0" data-short="1" data-limited="shrimp" data-recipe="ING-05|Shrimp|0.15|kg|0|;ING-08|Butter|0.03|kg|1.9|;ING-11|Garlic|0.02|kg|6.8|;ING-18|Cooking oil|0.02|L|8.3|;ING-15|Rice|0.2|kg|183|">
                       <td><img src="assets/img/dishes/mnu-05.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Garlic Butter Shrimp Rice Meal</span></th>
                       <td>Rice Meals</td>
@@ -331,7 +347,7 @@
                       <td><span class="badge badge-red"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Unavailable</span><span class="mt-1 note-block">Out of shrimp</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Garlic Butter Shrimp Rice Meal">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-06" data-title="Fried Chicken Rice Meal" data-category="Rice Meals" data-price="130" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-06.svg" data-cost="₱86.03" data-servings="38" data-short="0" data-limited="chicken breast" data-recipe="ING-01|Chicken breast|0.25|kg|9.7|;ING-16|All-purpose flour|0.05|kg|10.8|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-18|Cooking oil|0.1|L|8.3|;ING-15|Rice|0.2|kg|183|;ING-21|Salt|0.003|kg|1|">
+                    <tr data-row data-code="MNU-06" data-title="Fried Chicken Rice Meal" data-category="Rice Meals" data-price="130" data-prep="15" data-available="1" data-image="assets/img/dishes/mnu-06.svg" data-cost="₱86.03" data-servings="38" data-short="0" data-limited="chicken breast" data-recipe="ING-01|Chicken breast|0.25|kg|9.7|;ING-16|All-purpose flour|0.05|kg|10.8|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-18|Cooking oil|0.1|L|8.3|;ING-15|Rice|0.2|kg|183|;ING-21|Salt|0.003|kg|1|">
                       <td><img src="assets/img/dishes/mnu-06.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Fried Chicken Rice Meal</span></th>
                       <td>Rice Meals</td>
@@ -342,7 +358,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Fried Chicken Rice Meal">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Rice Meals" data-code="MNU-07" data-title="Beef Giniling Rice Meal" data-category="Rice Meals" data-price="125" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-07.svg" data-cost="₱71.40" data-servings="12" data-short="0" data-limited="tomato" data-recipe="ING-03|Ground beef|0.12|kg|49.4|;ING-14|Potato|0.08|kg|57|;ING-12|Tomato|0.05|kg|0.6|;ING-10|Onion|0.03|kg|18.3|;ING-11|Garlic|0.01|kg|6.8|;ING-15|Rice|0.2|kg|183|">
+                    <tr data-row data-code="MNU-07" data-title="Beef Giniling Rice Meal" data-category="Rice Meals" data-price="125" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-07.svg" data-cost="₱71.40" data-servings="12" data-short="0" data-limited="tomato" data-recipe="ING-03|Ground beef|0.12|kg|49.4|;ING-14|Potato|0.08|kg|57|;ING-12|Tomato|0.05|kg|0.6|;ING-10|Onion|0.03|kg|18.3|;ING-11|Garlic|0.01|kg|6.8|;ING-15|Rice|0.2|kg|183|">
                       <td><img src="assets/img/dishes/mnu-07.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Beef Giniling Rice Meal</span></th>
                       <td>Rice Meals</td>
@@ -353,7 +369,7 @@
                       <td><span class="badge badge-amber"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Only 12 left</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Beef Giniling Rice Meal">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-08" data-title="Pancit Canton" data-category="Snacks &amp; Noodles" data-price="110" data-prep="10" data-available="1" data-image="assets/img/dishes/mnu-08.svg" data-cost="₱35.31" data-servings="121" data-short="0" data-limited="pancit canton noodles" data-recipe="ING-17|Pancit canton noodles|0.12|kg|14.6|;ING-01|Chicken breast|0.05|kg|9.7|;ING-13|Cabbage|0.06|kg|7.7|;ING-10|Onion|0.02|kg|18.3|;ING-11|Garlic|0.01|kg|6.8|;ING-19|Soy sauce|0.02|L|11.7|;ING-18|Cooking oil|0.02|L|8.3|">
+                    <tr data-row data-code="MNU-08" data-title="Pancit Canton" data-category="Snacks &amp; Noodles" data-price="110" data-prep="10" data-available="1" data-image="assets/img/dishes/mnu-08.svg" data-cost="₱35.31" data-servings="121" data-short="0" data-limited="pancit canton noodles" data-recipe="ING-17|Pancit canton noodles|0.12|kg|14.6|;ING-01|Chicken breast|0.05|kg|9.7|;ING-13|Cabbage|0.06|kg|7.7|;ING-10|Onion|0.02|kg|18.3|;ING-11|Garlic|0.01|kg|6.8|;ING-19|Soy sauce|0.02|L|11.7|;ING-18|Cooking oil|0.02|L|8.3|">
                       <td><img src="assets/img/dishes/mnu-08.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Pancit Canton</span></th>
                       <td>Snacks &amp; Noodles</td>
@@ -364,7 +380,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Pancit Canton">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-09" data-title="Cheeseburger with Fries" data-category="Snacks &amp; Noodles" data-price="165" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-09.svg" data-cost="₱106.64" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-03|Ground beef|0.15|kg|49.4|;ING-16|All-purpose flour|0.03|kg|10.8|;ING-09|Cheese|0.03|kg|4.6|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-14|Potato|0.2|kg|57|;ING-18|Cooking oil|0.1|L|8.3|">
+                    <tr data-row data-code="MNU-09" data-title="Cheeseburger with Fries" data-category="Snacks &amp; Noodles" data-price="165" data-prep="12" data-available="1" data-image="assets/img/dishes/mnu-09.svg" data-cost="₱106.64" data-servings="75" data-short="0" data-limited="eggs" data-recipe="ING-03|Ground beef|0.15|kg|49.4|;ING-16|All-purpose flour|0.03|kg|10.8|;ING-09|Cheese|0.03|kg|4.6|;ING-06|Eggs|0.0333|tray (30 pcs)|2.5|= 1 egg (1 egg = 1/30 tray);ING-14|Potato|0.2|kg|57|;ING-18|Cooking oil|0.1|L|8.3|">
                       <td><img src="assets/img/dishes/mnu-09.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Cheeseburger with Fries</span></th>
                       <td>Snacks &amp; Noodles</td>
@@ -375,7 +391,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Cheeseburger with Fries">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-10" data-title="French Fries" data-category="Snacks &amp; Noodles" data-price="80" data-prep="8" data-available="1" data-image="assets/img/dishes/mnu-10.svg" data-cost="₱31.10" data-servings="83" data-short="0" data-limited="cooking oil" data-recipe="ING-14|Potato|0.25|kg|57|;ING-18|Cooking oil|0.1|L|8.3|;ING-21|Salt|0.002|kg|1|">
+                    <tr data-row data-code="MNU-10" data-title="French Fries" data-category="Snacks &amp; Noodles" data-price="80" data-prep="8" data-available="1" data-image="assets/img/dishes/mnu-10.svg" data-cost="₱31.10" data-servings="83" data-short="0" data-limited="cooking oil" data-recipe="ING-14|Potato|0.25|kg|57|;ING-18|Cooking oil|0.1|L|8.3|;ING-21|Salt|0.002|kg|1|">
                       <td><img src="assets/img/dishes/mnu-10.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">French Fries</span></th>
                       <td>Snacks &amp; Noodles</td>
@@ -386,7 +402,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of French Fries">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Snacks &amp; Noodles" data-code="MNU-11" data-title="Cheese Omelette" data-category="Snacks &amp; Noodles" data-price="95" data-prep="8" data-available="1" data-image="assets/img/dishes/mnu-11.svg" data-cost="₱48.10" data-servings="20" data-short="0" data-limited="tomato" data-recipe="ING-06|Eggs|0.1|tray (30 pcs)|2.5|= 3 eggs (1 egg = 1/30 tray);ING-09|Cheese|0.03|kg|4.6|;ING-08|Butter|0.01|kg|1.9|;ING-12|Tomato|0.03|kg|0.6|;ING-10|Onion|0.02|kg|18.3|">
+                    <tr data-row data-code="MNU-11" data-title="Cheese Omelette" data-category="Snacks &amp; Noodles" data-price="95" data-prep="8" data-available="1" data-image="assets/img/dishes/mnu-11.svg" data-cost="₱48.10" data-servings="20" data-short="0" data-limited="tomato" data-recipe="ING-06|Eggs|0.1|tray (30 pcs)|2.5|= 3 eggs (1 egg = 1/30 tray);ING-09|Cheese|0.03|kg|4.6|;ING-08|Butter|0.01|kg|1.9|;ING-12|Tomato|0.03|kg|0.6|;ING-10|Onion|0.02|kg|18.3|">
                       <td><img src="assets/img/dishes/mnu-11.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Cheese Omelette</span></th>
                       <td>Snacks &amp; Noodles</td>
@@ -397,7 +413,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Cheese Omelette">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Beverages" data-code="MNU-12" data-title="Iced Coffee" data-category="Beverages" data-price="85" data-prep="4" data-available="1" data-image="assets/img/dishes/mnu-12.svg" data-cost="₱28.50" data-servings="165" data-short="0" data-limited="coffee beans" data-recipe="ING-23|Coffee beans|0.02|kg|3.3|;ING-07|Fresh milk|0.12|L|25.7|;ING-22|Sugar|0.02|kg|5.5|">
+                    <tr data-row data-code="MNU-12" data-title="Iced Coffee" data-category="Beverages" data-price="85" data-prep="4" data-available="1" data-image="assets/img/dishes/mnu-12.svg" data-cost="₱28.50" data-servings="165" data-short="0" data-limited="coffee beans" data-recipe="ING-23|Coffee beans|0.02|kg|3.3|;ING-07|Fresh milk|0.12|L|25.7|;ING-22|Sugar|0.02|kg|5.5|">
                       <td><img src="assets/img/dishes/mnu-12.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Iced Coffee</span></th>
                       <td>Beverages</td>
@@ -408,7 +424,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Iced Coffee">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Beverages" data-code="MNU-13" data-title="Cola" data-category="Beverages" data-price="40" data-prep="1" data-available="1" data-image="assets/img/dishes/mnu-13.svg" data-cost="₱18.00" data-servings="133" data-short="0" data-limited="cola (355 ml bottle)" data-recipe="ING-24|Cola (355 ml bottle)|1|bottles|133|">
+                    <tr data-row data-code="MNU-13" data-title="Cola" data-category="Beverages" data-price="40" data-prep="1" data-available="1" data-image="assets/img/dishes/mnu-13.svg" data-cost="₱18.00" data-servings="133" data-short="0" data-limited="cola (355 ml bottle)" data-recipe="ING-24|Cola (355 ml bottle)|1|bottles|133|">
                       <td><img src="assets/img/dishes/mnu-13.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Cola</span></th>
                       <td>Beverages</td>
@@ -419,7 +435,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Cola">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Beverages" data-code="MNU-14" data-title="Bottled Water" data-category="Beverages" data-price="25" data-prep="1" data-available="1" data-image="assets/img/dishes/mnu-14.svg" data-cost="₱9.00" data-servings="92" data-short="0" data-limited="bottled water (500 ml)" data-recipe="ING-25|Bottled water (500 ml)|1|bottles|92|">
+                    <tr data-row data-code="MNU-14" data-title="Bottled Water" data-category="Beverages" data-price="25" data-prep="1" data-available="1" data-image="assets/img/dishes/mnu-14.svg" data-cost="₱9.00" data-servings="92" data-short="0" data-limited="bottled water (500 ml)" data-recipe="ING-25|Bottled water (500 ml)|1|bottles|92|">
                       <td><img src="assets/img/dishes/mnu-14.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Bottled Water</span></th>
                       <td>Beverages</td>
@@ -430,7 +446,7 @@
                       <td><span class="badge badge-slate"><svg width="14" height="14" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Available</span></td>
                       <td class="num"><button type="button" data-row-dialog="dish-dialog" class="btn btn-secondary btn-sm" aria-label="Open recipe of Bottled Water">Recipe</button></td>
                     </tr>
-                    <tr data-row data-filter-in="menu-cat" data-filter-key="Desserts" data-code="MNU-15" data-title="Leche Flan" data-category="Desserts" data-price="80" data-prep="3" data-available="1" data-image="assets/img/dishes/mnu-15.svg" data-cost="₱36.35" data-servings="37" data-short="0" data-limited="eggs" data-recipe="ING-06|Eggs|0.0667|tray (30 pcs)|2.5|= 2 eggs (1 egg = 1/30 tray);ING-07|Fresh milk|0.15|L|25.7|;ING-22|Sugar|0.06|kg|5.5|">
+                    <tr data-row data-code="MNU-15" data-title="Leche Flan" data-category="Desserts" data-price="80" data-prep="3" data-available="1" data-image="assets/img/dishes/mnu-15.svg" data-cost="₱36.35" data-servings="37" data-short="0" data-limited="eggs" data-recipe="ING-06|Eggs|0.0667|tray (30 pcs)|2.5|= 2 eggs (1 egg = 1/30 tray);ING-07|Fresh milk|0.15|L|25.7|;ING-22|Sugar|0.06|kg|5.5|">
                       <td><img src="assets/img/dishes/mnu-15.svg" alt="" width="48" height="48" class="dish-thumb"></td>
                       <th scope="row"><span class="font-semibold text-slate-900">Leche Flan</span></th>
                       <td>Desserts</td>
@@ -457,7 +473,7 @@
                 <h2 id="dish-dialog-title" class="title-lg" data-bind="title"></h2>
                 <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
               </div>
-              <form id="dish-form" data-unsaved-warning method="post" action="menu.html" enctype="multipart/form-data" data-local-save data-toast-open="toast-saved">
+              <form id="dish-form" data-unsaved-warning method="post" action="/menu/update" enctype="multipart/form-data">
                 <div class="form-error" role="alert" id="dish-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <input type="hidden" name="item_id" value data-bind-value="code">
                 <div class="modal-body space-y-5">
@@ -592,7 +608,7 @@
               <h2 id="add-dish-title" class="title-lg">Add menu item</h2>
               <button type="button" data-dialog-close class="btn btn-ghost btn-sm !px-2" aria-label="Close dialog"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
             </div>
-            <form id="add-dish-form" method="post" action="menu.html" enctype="multipart/form-data" data-local-save data-toast-open="toast-added-dish">
+            <form id="add-dish-form" method="post" action="/menu" enctype="multipart/form-data">
               <div class="form-error" role="alert" id="add-dish-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
               <div class="modal-body space-y-4">
                 <div>
@@ -657,7 +673,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                           </button>
                         </div>
-                        <form id="dlg-delete-dish-form" method="post" action="menu.html" data-local-save data-toast-open="toast-dish-removed">
+                        <form id="dlg-delete-dish-form" method="post" action="/menu/delete">
                           <!-- Backend: POST only. A dish with order_items cannot be deleted: save action=archive (availability = 0) instead. Deleting also removes its recipes rows. -->
                           <div class="modal-body space-y-3">
                             <input type="hidden" name="item_id" value data-fill-input="id">
@@ -697,46 +713,11 @@
     </tr>
   </template>
 
-  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
-  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
-    <div id="toast-dish-removed" class="toast toast-warning pointer-events-auto hidden">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-amber-700" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">Dish updated</p>
-        <p class="mt-0.5 text-sm text-slate-700">A dish with order history is marked unavailable instead of being deleted.</p>
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-saved" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">Changes saved</p>
-        <p class="mt-0.5 text-sm text-slate-600">The dish and its recipe were updated.</p>
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-added-dish" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">Dish added</p>
-        <p class="mt-0.5 text-sm text-slate-600">It now appears in the menu table.</p>
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-  </div>
 
   <script src="assets/js/shell.js"></script>
-  <script src="assets/js/session.js"></script>
   <script src="assets/js/dialogs.js"></script>
   <script src="assets/js/forms.js"></script>
   <script src="assets/js/rows.js"></script>
-  <script src="assets/js/filters.js"></script>
   <script src="assets/js/row-dialog.js"></script>
   <script src="assets/js/menu-images.js"></script>
 </body>

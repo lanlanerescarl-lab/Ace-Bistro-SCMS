@@ -1,38 +1,40 @@
-# Ace Bistro — Supply Chain Management System (front end)
+# Ace Bistro — Supply Chain Management System (front end, hand-off package)
 
 The screens of the *Ace Bistro Supply Chain Management System* course proposal as plain HTML, Tailwind CSS (built locally) and vanilla JavaScript.
-It has no backend and needs no internet connection. Every number you see is a sample row written in the page; the backend developer replaces
-those rows with database rows. The sample "now" is frozen at **Friday, 6 November 2026, 11:30 AM**.
+There is no backend in this package and it needs no internet connection. Every number you see is a sample row written in the page; the backend
+developer replaces those rows with database rows. The sample "now" is frozen at **Friday, 6 November 2026, 11:30 AM**.
+
+## Working demo vs hand-off package
+
+| | Working demo (Phase 8 ZIP) | Hand-off package (this folder) |
+|---|---|---|
+| Purpose | click through the whole system on its own | give the backend developer pages that a server can fill |
+| Login and roles | the login screen and each role's own menu work in the browser alone | no login logic: the server writes the role on `<html>` |
+| Forms | close and show a confirmation without a server | real `<form method="post">` with named fields and routes |
+| Lists | the browser hides rows, counts the cards, pages the rows | the server sends one page of rows and the numbers |
+| Still the same | every page, every layout, the dialogs, calendars, charts and print styles | |
+
+The Phase 8 ZIP is still the working demo; keep it for presentations. This folder is what goes to the backend developer.
 
 ## Open it
 
 1. Open the `ace-bistro-scm` folder in Phoenix Code (or any editor that can serve files) and start **Live Preview** on `login.html`.
    Opening the files directly from disk also works.
-2. Log in with a test account (below). Every role lands on its own first page and sees only its own menu.
-
-## Test accounts
-
-`assets/js/test-accounts.js` holds these (testing only; the backend's login replaces that file).
-
-| Username | Password | Role | First page | Notes |
-|---|---|---|---|---|
-| `carljohn` | `admin123` | Administrator / Owner | `dashboard.html` | sees everything |
-| `jsantos` | `cashier123` | Cashier / Service Staff | `orders.html` | |
-| `lramos` | `cashier456` | Cashier / Service Staff | `orders.html` | second cashier |
-| `mdelacruz` | `kitchen123` | Kitchen Staff / Cook | `inventory.html` | |
-| `cmendoza` | `inventory123` | Inventory Staff | `inventory.html` | |
-| `pgarcia` | `procure123` | Procurement Officer | `procurement.html` | |
-| `tvillanueva` | `locked123` | Kitchen Staff | — | shows the "account locked" message |
-| `expired` | `expired123` | Cashier | — | shows the "password expired" message |
-
-The session is kept in `sessionStorage` (`ace-bistro-scm:user`). Every page checks it before the first paint (script in `<head>`): no session goes to
-`login.html`, a role that may not open the page goes to `access-denied.html` (its button leads to the role's own start page). Log out asks for confirmation.
+2. There is no login step. Every page opens as the **Administrator / Owner** (`carljohn`), so the whole menu is visible.
+   `login.html` is only the form that a real server will receive.
+3. To look at another role, change one attribute on the first tag of the page: `<html … data-role="admin">` to `cashier`, `kitchen`,
+   `inventory` or `procurement`. The sidebar and the Alerts menu then show only what that role may open. A page that role may not open stays
+   readable, because the server (not the browser) must refuse it and show `access-denied.html`.
+4. A form sends its fields to its route (for example `/login`). Until the backend has that route, the browser shows its own error page after
+   a send; layout, dialogs, calendars and charts work without it.
 
 ## Pages
 
+Sample data is consistent across pages (the same 25 ingredients, 15 dishes, 5 suppliers and 7 users), so a number on one page can be found on another.
+
 | Page | Roles | What it is for |
 |---|---|---|
-| `login.html` | everyone | log in; loading state on the button, clear messages for a wrong, locked or expired account |
+| `login.html` | everyone | log in form; loading state on the button; message slots for a wrong, locked or expired account |
 | `dashboard.html` | Administrator | today's sales, stock, purchasing and alerts |
 | `orders.html` | Administrator, Cashier | Order Records: read-only list of orders by date, type and status; order dialog |
 | `menu.html` | Administrator, Cashier, Kitchen | dishes with pictures, one shared recipe/edit dialog, add dish with picture upload |
@@ -46,25 +48,28 @@ The session is kept in `sessionStorage` (`ace-bistro-scm:user`). Every page chec
 | `purchase-orders.html`, `purchase-order-detail.html` | Administrator, Procurement | all purchase orders; one order with print |
 | `receiving.html` | Admin, Inventory, Procurement | record deliveries against purchase orders |
 | `demand.html` | Administrator, Procurement | simple demand estimation: 7-day averages, no model |
-| `reports.html` + ten `report-*.html` | by role | printable reports (stock, purchasing, sales); nine have a calendar |
+| `reports.html` + ten `report-*.html` | by role | printable reports (stock, purchasing, sales); each has a calendar |
 | `user-accounts.html`, `role-permissions.html`, `settings.html` | Administrator | users, what each role can do, business settings |
 | `profile.html` | every role | My account: own name and password; the Administrator can also change their own username |
 | `access-denied.html`, `not-found.html` | every role | error pages |
 
-Roles, landing pages and sidebar items follow the proposal (Administrator, Cashier, Kitchen Staff, Inventory Staff, Procurement Officer).
-The top bar has one user chip (name and role from the session, My account, Log out) and the Alerts menu; its links open pages the role can open, and
-`inventory.html?status=…` / `purchase-orders.html?status=…` open the list with that filter already chosen.
+`index.html` only forwards to `login.html`. Roles, landing pages and sidebar items follow the proposal (Administrator, Cashier, Kitchen Staff,
+Inventory Staff, Procurement Officer). The top bar has one user chip (name and role, My account, Log out) and the Alerts menu; its links open pages the
+role can open, and `inventory.html?status=…` / `purchase-orders.html?status=…` open the list with that filter already chosen.
 
 ## Folder
 
 ```
 ace-bistro-scm/
-├── *.html                 the pages (a header comment in each says what it is for, its roles and its repeated markup)
+├── *.html                 the pages (a header comment in each says what it is for, its roles, its scripts and its repeated markup)
 ├── assets/
 │   ├── css/app.css        component styles (hand-written, loaded first)  ·  tailwind.css (built, loaded second)
 │   ├── fonts/             Inter, self-hosted
 │   ├── img/dishes/        one small SVG for each of the 15 dishes + placeholder.svg
 │   └── js/                one file for each feature (list below); each starts with a header that names the data- hooks it reads
+├── docs/
+│   ├── BACKEND-HANDOFF.md      what the backend must build, page by page
+│   └── DEVELOPMENT-REPORT.md   what was built in each phase, what was checked, what was not
 └── tools/                 only for rebuilding tailwind.css (package.json, tailwind.config.cjs, input.css)
 ```
 
@@ -74,30 +79,45 @@ All behaviour is switched on by `data-` attributes in the markup. The header of 
 
 | Script | What it does | Main hooks |
 |---|---|---|
-| `shell.js` | menus, drawer, toasts, `Ace` helpers | `data-toast-open`, `data-dialog-open`, `data-roles` |
-| `session.js`, `login.js`, `test-accounts.js` | session, role view, login form | `data-page-roles` on `<html>`, `data-user-*` |
+| `shell.js` | menus, drawer, flash message, `Ace` helpers | `data-roles`, `data-toast-open`, `data-flash`, `data-dialog-open` |
 | `dialogs.js` | native `<dialog>` open/close, backdrop click | `data-dialog-open`, `data-dialog-close`, `data-fill-*` |
-| `forms.js` | loading state, field errors, local save | `data-local-save`, `data-loading-text`, `.field-error` |
-| `filters.js` | filter and search the rows in the page, cards and counts from the rows | `data-filter-in/-key`, `data-filter-group/-value`, `data-count`, `data-sum` |
-| `pager.js` | 20 / 50 / 100 rows per page for a list | `nav[data-pager]`, rows get `hidden` |
+| `forms.js` | double-submit guard (loading state), field errors, auto-submit selects | `data-loading-text`, `data-autosubmit`, `.field-error` |
 | `row-dialog.js` | ONE dialog written once in a `<template>`, filled from a row | `data-row-dialog`, `data-bind`, `data-lines-body` |
-| `rows.js` | add and remove rows, live totals | `data-add-row`, `data-remove-row`, `data-calc-*` |
-| `menu-images.js` | dish picture upload preview (nothing is uploaded) | `data-image-upload`, `data-image-drop`, `data-image-remove` |
+| `rows.js` | add and remove rows in a form, live totals | `data-add-row`, `data-remove-row`, `data-calc-*` |
+| `menu-images.js` | dish picture preview before sending | `data-image-upload`, `data-image-drop`, `data-image-remove` |
 | `charts.js`, `line-chart.js` | chart tooltips and keyboard; line charts drawn from their table | `.hit[data-tip]`, `data-line-chart` |
 | `calendar.js` | Year heat-map, Month grid, Day card from one JSON block | `data-cal`, `script[data-cal-data]` |
 
 The CSS classes of the components (`.btn`, `.card`, `.badge`, `.table`, `.input`, `.modal`, `.stat-card`, …) are in `assets/css/app.css`. Colours and fonts
 are in `tools/tailwind.config.cjs`. `app.css` loads before `tailwind.css` so a utility class in the markup can still override a component class.
 
-**Lists** (Order Records, Stock Movements, Inventory, Purchase Orders, Menu): the rows are in the page; `filters.js` hides the rows that do not match and
-`pager.js` shows one page of the rest. The cards and the counts on the filter buttons are counted from the rows, so a card always equals its list.
+**Lists** (Order Records, Stock Movements, Inventory, Purchase Orders, Menu, Users): the filters are GET forms and links, the pager is plain markup
+(`?page=`, `per_page`), and the summary cards are buttons that set `status`. The sample page shows one page of rows; the server sends the right rows
+and counts. Every list has a comment that says which table the rows come from and how each number is calculated.
 
 **Calendars:** each is one `<script type="application/json" data-cal-data>` block (365 daily values, start date, colour steps, label text; Sales also has
-31 day cards) and `calendar.js` draws everything from it. The contract is at the top of `calendar.js` and in a comment above every block. The heat-map cells
-are 20 px with a 4 px gap and the map scrolls sideways inside its own region, opening on today.
+31 day cards) and `calendar.js` draws everything from it. The contract is at the top of `calendar.js`, in a comment above every block and in
+`docs/BACKEND-HANDOFF.md`. The heat-map cells are 20 px with a 4 px gap and the map scrolls sideways inside its own region, opening on today.
 
 **Charts** are inline SVG with the data in a comment, an `sr-only` table, `data-tip` hit areas and one `.chart-tip`. Line charts are drawn from their
 table at the width they have (`line-chart.js`).
+
+## What the backend replaces
+
+| In the pages now | The backend provides | Where it is described |
+|---|---|---|
+| `data-role="admin"` on `<html>` | the signed-in user's role | `BACKEND-HANDOFF.md`, "Shell and sign-in" |
+| user chip: Carl John, `carljohn` | the signed-in user's name, username and role label | same |
+| sample rows in tables, cards and dialogs | rows printed in a loop from the tables named in the comment above the first row | the comment above each repeated block |
+| numbers in cards, badges, filter buttons | counts and sums by the rule in the `SUMMARY RULES` comment | same, and the page table in `BACKEND-HANDOFF.md` |
+| filter forms and pager links | a query that reads `q`, `status`, `date_from`, `date_to`, `type`, `page`, `per_page` | page table |
+| every `<form method="post">` | a route that validates, saves and redirects with a flash message | endpoint table |
+| `#flash-slot` | the message after a save (`success`, `error` or `warning`) | `BACKEND-HANDOFF.md` |
+| the BEGIN/END SHARED blocks (sidebar, top bar, flash slot) | one include used by every page | "Shell and sign-in" |
+| the calendar JSON blocks | 365 daily values and the day cards, in the same shape | "Calendar data" |
+| the `access-denied.html` and `not-found.html` pages | the response for a forbidden or missing page | page table |
+
+Permissions must be checked on the server. `data-roles` hides menu items and `data-page-roles` only documents who may open a page.
 
 ## Rebuilding the stylesheet
 
@@ -109,28 +129,23 @@ npm install
 npm run build:css
 ```
 
-## Notes for the backend developer
-
-- Replace the BEGIN/END SHARED blocks (sidebar, top bar, flash) with includes; they are identical in every page except `aria-current`.
-- Each repeated block (a table row, a template, a calendar JSON block) is documented by the comment above its first copy: source table, rule for derived values, and the `data-` attributes it carries.
-- Summary cards carry a `SUMMARY RULES` comment: every number is a count or sum of the rows on its page, or of the rows named there.
-- Forms are written for a real POST (`name`, `required`, `maxlength`, `min`/`max`/`step`, error slots, `enctype="multipart/form-data"` where a file is sent). `data-local-save` makes them close and show a toast without a server; remove it and the form posts.
-- Filters are GET forms (`q`, `status`, `date_from`, `date_to`, …) and the pager is `page` / `per_page`; the script only hides rows that are already in the page, so a real query replaces it.
-- `test-accounts.js` and the session check in `<head>` are testing only. Permissions must be checked on the server; `data-roles` and `data-page-roles` only hide things.
-- The dish picture is posted as `name="image"` (JPEG, PNG or WebP, up to 2 MB, checked again on the server); `remove_image=1` asks to delete the stored one.
+The PHP project's `docs/conventions.md` asks for no Tailwind and no build step; `BACKEND-HANDOFF.md` ("Styles, scripts and the CSP") says how the
+built file can be served as a plain static file.
 
 ## Beyond the proposal
 
-Things the proposal's ERD does not have; each is marked in a comment where it appears.
+Things the proposal's ERD does not have. Each is marked `EXTRA (not in the proposal ERD)` in a comment on the pages named here.
 
-- `sales_summary` (one row for each day: orders, sales, cancelled orders, cash sales): feeds the Sales calendar and its day cards.
-- Day-end history for five calendars (ingredients needing attention, at or below reorder level, open purchase orders, suggested purchase value) and supplier price changes: the ERD keeps no history for them.
-- `menu_item.image_path` for the dish pictures.
-- `category`, `unit`, `payment_method` and `setting` tables (the Settings page), including `setting.well_stocked_multiple` for the green "well stocked" stock bar.
-- `is_active` on users and suppliers (archive instead of delete).
-- Order Records and Stock Movements pages, the user-chip menu, My account, and the Alerts menu.
-
-## Not built on purpose
-
-Single branch only · no online payments · no accounting · no supplier integration · demand estimation is a plain average, no forecasting model ·
-no barcode scanning · Order Records is read-only (orders are taken outside the system).
+- **`sales_summary`** (one row for each day: `summary_date`, orders, sales, cancelled orders, cash sales): `report-sales-trend.html`.
+- **Day-end history** (one stored value for each day): ingredients needing attention (`report-inventory-status.html`), ingredients at or below reorder
+  level (`report-low-stock.html`), open purchase orders (`report-pending-orders.html`), suggested purchase value (`report-suggested-purchases.html`).
+- **Supplier price changes** (one row for each price update): `report-supplier-prices.html`.
+- **`menu_item.image_path`** and the picture upload (`image`, `remove_image`): `menu.html`.
+- **`category`, `unit`, `payment_method` and `setting` tables**, including `setting.well_stocked_multiple` for the green stock bar: `settings.html`;
+  `inventory.html` (the stock bar) and `orders.html` (payment method) read them.
+- **`is_active` on users and suppliers** (archive instead of delete): `user-accounts.html`, `suppliers.html`, `supplier-detail.html`.
+- **`user_account.last_login_at`**: `user-accounts.html`.
+- **The Order Records and Stock Movements pages**: `orders.html`, `stock-movements.html`.
+- **My account**, including the Administrator changing their own username: `profile.html`.
+- **The user-chip menu, the Alerts menu, the flash slot and `data-role` on `<html>`**: the shared top bar, in every page.
+- **The fixed role matrix** (a list of modules and actions with Yes, View only or No access for each role): `role-permissions.html`.
