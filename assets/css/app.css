@@ -211,6 +211,7 @@ dialog.modal > form { display: flex; flex-direction: column; flex: 1 1 auto; min
 }
 .toast-success { border-left-color: var(--brand); }
 .toast-warning { border-left-color: #D97706; }
+.toast-error { border-left-color: #B91C1C; }
 @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ---------- Charts (inline SVG) ---------- */
@@ -304,7 +305,7 @@ dialog.modal > form { display: flex; flex-direction: column; flex: 1 1 auto; min
   @page { margin: 14mm 14mm 18mm; }
   .print-only { display: block; }
   body { background: #fff !important; font-size: 12px; }
-  .no-print, #toast-root, dialog { display: none !important; }
+  .no-print, .toast-stack, dialog { display: none !important; }
   #app { display: block !important; }
   #view { max-width: none !important; padding: 0 !important; }
   .card { box-shadow: none !important; break-inside: avoid; border-color: #CBD5E1; }
@@ -333,10 +334,9 @@ svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round
 [hidden] { display: none !important; }
 .popover.hidden, #drawer-overlay.hidden { display: none; }
 
-/* ---------- Role view and session ----------
- * The session guard in every <head> sets data-role on <html> before the first paint; these rules then hide everything marked data-roles
- * that does not list that role. Until data-role is set (no session: the page is about to redirect) the body stays invisible. */
-html:not([data-role]) body:not([data-public]) { visibility: hidden; }
+/* ---------- Role view ----------
+ * The server writes the signed-in role on <html data-role="...">. These rules hide everything marked data-roles that does not list that role.
+ * This is visual only: the server must also refuse what a role may not do. To preview another role, change data-role in the markup. */
 html[data-role="admin"] [data-roles]:not([data-roles~="admin"]),
 html[data-role="cashier"] [data-roles]:not([data-roles~="cashier"]),
 html[data-role="kitchen"] [data-roles]:not([data-roles~="kitchen"]),
@@ -349,8 +349,7 @@ html[data-role="procurement"] [data-roles]:not([data-roles~="procurement"]) { di
 .nav-link:hover { background: var(--line-soft); color: var(--ink); }
 .nav-link[aria-current="page"] { border-color: #BBF7D0; background: var(--brand-tint); color: var(--brand-dark); }
 .nav-link[aria-current="page"] svg { color: var(--brand); }
-.user-chip { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 4px; border: 1px solid var(--line); border-radius: 9999px; visibility: hidden; }
-.user-chip.is-ready { visibility: visible; }
+.user-chip { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 4px; border: 1px solid var(--line); border-radius: 9999px; }
 @media (min-width: 640px) { .user-chip { padding-right: 12px; } }
 .avatar { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 9999px; background: var(--brand-tint); font-size: 12px; font-weight: 700; color: var(--brand-dark); }
 .menu-item { display: flex; min-height: 44px; align-items: center; gap: 8px; padding: 0 12px; border: 0; border-radius: 6px; background: none; font-size: 14px; font-weight: 500; color: var(--text); cursor: pointer; }
@@ -358,21 +357,15 @@ html[data-role="procurement"] [data-roles]:not([data-roles~="procurement"]) { di
 .alert-count { display: inline-flex; min-width: 20px; align-items: center; justify-content: center; padding: 0 6px; border-radius: 9999px; background: #DC2626; font-size: 12px; font-weight: 700; line-height: 20px; color: #fff; }
 .alert-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-height: 44px; margin: 0 -8px; padding: 6px 8px; border-radius: 6px; font-size: 14px; }
 .alert-row:hover { background: var(--line-soft); }
-.flash { display: flex; align-items: flex-start; gap: 8px; margin: 16px 16px 0; padding: 8px 12px; border: 1px solid; border-radius: 6px; font-size: 14px; }
-@media (min-width: 768px) { .flash { margin-inline: 24px; } }
-@media (min-width: 1024px) { .flash { margin-inline: 32px; } }
-.flash-success { border-color: #BBF7D0; background: #F0FDF4; color: #14532D; }
-.flash-error { border-color: var(--red-line); background: var(--red-bg); color: #7F1D1D; }
-.flash-warning { border-color: var(--amber-line); background: var(--amber-bg); color: #78350F; }
 
 /* ---------- Loading state of a button and the pager ---------- */
 .spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 9999px; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .pager-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.pager-btn { min-width: 44px; min-height: 44px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; }
-.pager-btn:hover:not(:disabled) { background: var(--line-soft); }
+.pager-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 12px; border: 1px solid #CBD5E1; border-radius: 6px; background: #fff; font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; cursor: pointer; }
+.pager-btn:hover:not([aria-disabled="true"]) { background: var(--line-soft); }
 .pager-btn[aria-current="page"] { border-color: var(--brand); background: var(--brand-tint); color: var(--brand-dark); }
-.pager-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pager-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; background: #F8FAFC; }
 .pager-gap { min-width: 24px; text-align: center; color: var(--muted); }
 
 /* ---------- Form errors and the password checklist ---------- */

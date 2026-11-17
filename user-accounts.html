@@ -4,11 +4,12 @@
   FOR: Administrator.
   PURPOSE: Create, edit, deactivate and reset staff accounts. Administrator only.
   SECTIONS: Users · Add user · Edit Carl John · Edit Jun Santos · Edit Liza Ramos · Edit Mario Dela Cruz · Edit Carla Mendoza · Edit Paolo Garcia.
-  REPEATED MARKUP: 7 rows of the "users" list (each is documented by the comment above its first copy).
-  SCRIPTS: shell, session, dialogs, forms, filters (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
-  BACKEND: the BEGIN/END SHARED blocks become includes; repeated markup is printed in a loop; the values on this page are the sample rows named in the comments.
+  REPEATED MARKUP: 7 user rows (one per user_account) (each is documented by the comment above its first copy).
+  SCRIPTS: shell, dialogs, forms (assets/js, one file for each feature; the header of each file lists the data- hooks it reads).
+  BACKEND: the BEGIN/END SHARED blocks become includes (the server writes data-role on <html> and prints the signed-in user); repeated markup is printed in a loop;
+    every date, time and figure is an example value (example "now": Friday 6 Nov 2026, 11:30 AM). Forms, filters and calculation rules are described in the comments below and in docs/BACKEND-HANDOFF.md.
 -->
-<html lang="en" class="h-full" data-page-roles="admin">
+<html lang="en" class="h-full" data-role="admin" data-page-roles="admin">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,13 +18,6 @@
   <meta name="theme-color" content="#15803D">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803D'/%3E%3Cpath d='M10 22h12M11 22v-5a5 5 0 1 1 10 0v5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 
-  <!-- Session guard. Runs before the first paint: no session sends the visitor to the login page, a role that may not open this page
-       (data-page-roles on <html>) goes to access-denied.html, otherwise data-role is set so app.css paints this role's menu from the first frame.
-       The backend replaces it with a server-side check. -->
-  <script>(function(){var d=document.documentElement,u=null;try{u=JSON.parse(sessionStorage.getItem('ace-bistro-scm:user'))}catch(e){}
-  if(!u||!u.role){location.replace('login.html');return}
-  var r=d.getAttribute('data-page-roles');if(r&&r.split(' ').indexOf(u.role)<0){location.replace('access-denied.html');return}
-  d.setAttribute('data-role',u.role)})()</script>
 
   <link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -32,7 +26,6 @@
   <!-- app.css (component classes) loads before tailwind.css so that Tailwind utilities can still override a component class. -->
   <link rel="stylesheet" href="assets/css/app.css">
   <link rel="stylesheet" href="assets/css/tailwind.css">
-  <noscript><style>html body { visibility: visible !important; }</style></noscript>
 </head>
 <body class="h-full bg-page font-sans text-slate-800 antialiased">
   <a href="#main" class="skip-link">Skip to main content</a>
@@ -41,10 +34,12 @@
     <!-- Mobile drawer overlay -->
     <div id="drawer-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden" aria-hidden="true"></div>
 
-    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include) -->
+    <!-- BEGIN SHARED: sidebar (identical in every page except which item carries aria-current="page"; the backend turns this block into an include.
+         The logo links to the signed-in role's first page: Administrator dashboard.html, Cashier orders.html, Kitchen and Inventory inventory.html, Procurement procurement.html, written by the server.
+         EXTRA (not in the proposal ERD): data-role on <html> (the signed-in role, written by the server) decides which data-roles items show; hiding is visual only, so the server must also check permissions. -->
     <aside id="sidebar" class="no-print app-sidebar -translate-x-full lg:translate-x-0" aria-label="Sidebar">
       <div class="sidebar-head">
-        <a href="dashboard.html" data-home-link class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
+        <a href="dashboard.html" class="flex items-center gap-3" aria-label="Ace Bistro Supply Chain Management, go to my start page">
           <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
           <span class="leading-tight">
             <span class="block text-[15px] font-semibold text-slate-900">Ace Bistro</span>
@@ -75,13 +70,14 @@
       <!-- BEGIN SHARED: topbar (the backend turns this block into an include) -->
       <header id="topbar" class="no-print app-topbar">
         <button type="button" data-drawer-open class="btn btn-ghost !px-2 lg:hidden" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
-        <a href="dashboard.html" data-home-link class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
+        <a href="dashboard.html" class="flex items-center gap-2 lg:hidden" aria-label="Ace Bistro, go to my start page">
           <span class="brand-mark-sm"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg></span>
           <span class="hidden strong-sm xs:inline">Ace Bistro</span>
         </a>
         <div class="ml-auto flex items-center gap-1 sm:gap-2">
           <!-- Alerts: Cashier has none. The badge is 13 for Administrator, Inventory Staff and Procurement Officer (5 low stock + 4 near expiry + 4 pending purchase orders)
-               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=. -->
+               and 9 for Kitchen (low stock + near expiry only). Every link opens a page the role can open, filtered by ?status=.
+               EXTRA (not in the proposal ERD): the Alerts menu; its counts and rows come from the Inventory and Purchase Orders queries. -->
           <div class="relative" data-roles="admin kitchen inventory procurement">
             <button type="button" data-dropdown-toggle="alerts-panel" class="btn btn-secondary relative !px-3" aria-haspopup="true" aria-expanded="false" aria-controls="alerts-panel">
               <svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -179,23 +175,24 @@
               </div>
             </div>
           </div>
-          <!-- Signed-in user: name, initials and role come from the session (data-user-* hooks, filled by session.js). The backend prints them. -->
+          <!-- Signed-in user. The server prints the name, initials and role label of the logged-in account (written here: Carl John, "CJ", Administrator / Owner; username carljohn on My account).
+               EXTRA (not in the proposal ERD): the user-chip menu (My account, Log out). -->
           <div class="relative">
             <button type="button" data-dropdown-toggle="user-menu" class="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-full" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu">
               <span class="sr-only">Account menu</span>
-              <span class="user-chip" data-user-chip>
-                <span class="avatar" aria-hidden="true" data-user-initials></span>
+              <span class="user-chip">
+                <span class="avatar" aria-hidden="true">CJ</span>
                 <span class="hidden text-left leading-tight sm:block">
-                  <span class="block text-[13px] font-semibold text-slate-900" data-user-name></span>
-                  <span class="cell-xs" data-user-role></span>
+                  <span class="block text-[13px] font-semibold text-slate-900">Carl John</span>
+                  <span class="cell-xs">Administrator / Owner</span>
                 </span>
               </span>
               <svg width="16" height="16" viewBox="0 0 24 24" class="i hidden shrink-0 text-slate-600 sm:block" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
             </button>
             <div id="user-menu" class="popover hidden absolute right-0 top-full z-30 mt-2 w-60" role="region" aria-label="Account">
               <div class="border-b border-slate-100 px-4 py-3">
-                <p class="strong-sm" data-user-name></p>
-                <p class="text-[13px] text-slate-600" data-user-role></p>
+                <p class="strong-sm">Carl John</p>
+                <p class="text-[13px] text-slate-600">Administrator / Owner</p>
               </div>
               <ul class="p-1">
                 <li><a href="profile.html" class="menu-item"><svg width="18" height="18" viewBox="0 0 24 24" class="i shrink-0 text-slate-600" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My account</a></li>
@@ -205,21 +202,38 @@
           </div>
         </div>
       </header>
+      <!-- Log out: a confirm dialog. The form posts to /logout; the server ends the session and redirects to the login page. -->
       <dialog id="logout-dialog" class="modal" aria-labelledby="logout-title">
-        <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
-        <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
-        <div class="modal-foot">
-          <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
-          <button type="button" data-logout class="btn btn-primary">Log out</button>
-        </div>
+        <form method="post" action="/logout">
+          <div class="modal-head"><h2 id="logout-title" class="title-lg">Log out of Ace Bistro?</h2></div>
+          <div class="modal-body"><p class="text-sm text-slate-700">You will need to log in again to continue.</p></div>
+          <div class="modal-foot">
+            <button type="button" data-dialog-close autofocus class="btn btn-secondary">Cancel</button>
+            <button type="submit" data-loading-text="Logging out…" class="btn btn-primary">Log out</button>
+          </div>
+        </form>
       </dialog>
       <!-- END SHARED: topbar -->
 
-      <!-- BEGIN SHARED: flash (one message after a save; the backend un-hides the paragraph that applies and fills in the text) -->
-      <div id="flash-slot" class="no-print" role="status" aria-live="polite">
-        <p data-flash="success" hidden class="flash flash-success"><span class="font-semibold">Saved.</span> <span data-flash-text></span></p>
-        <p data-flash="error" hidden class="flash flash-error"><span class="font-semibold">Could not save.</span> <span data-flash-text></span></p>
-        <p data-flash="warning" hidden class="flash flash-warning"><span class="font-semibold">Please check.</span> <span data-flash-text></span></p>
+      <!-- BEGIN SHARED: flash (one message after a save or an error. The server removes "hidden" from the variant that applies and fills in data-flash-text;
+           a success closes itself after 5 seconds, the others stay until dismissed. The backend turns this block into an include.
+           EXTRA (not in the proposal ERD): the flash message slot) -->
+      <div id="flash-slot" class="no-print toast-stack" role="status" aria-live="polite">
+        <div data-flash="success" hidden class="toast toast-success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          <div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Saved.</p><p class="mt-0.5 text-sm text-slate-600" data-flash-text></p></div>
+          <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div data-flash="error" hidden role="alert" class="toast toast-error">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-red-700" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          <div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Could not save.</p><p class="mt-0.5 text-sm text-slate-600" data-flash-text></p></div>
+          <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
+        <div data-flash="warning" hidden class="toast toast-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 text-amber-700" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <div class="min-w-0 flex-1"><p class="font-semibold text-slate-900">Please check.</p><p class="mt-0.5 text-sm text-slate-600" data-flash-text></p></div>
+          <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification"><svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+        </div>
       </div>
       <!-- END SHARED: flash -->
 
@@ -258,20 +272,21 @@
                   <div class="min-w-0 flex-1 basis-60">
                     <label for="user-search" class="label">Search users</label>
                     <div class="flex gap-2">
-                      <input id="user-search" name="q" type="search" form="filter-users" data-search-in="users" autocomplete="off" placeholder="Name or username" class="input min-w-0">
+                      <input id="user-search" name="q" type="search" form="filter-users" autocomplete="off" placeholder="Name or username" class="input min-w-0">
                       <button type="submit" form="filter-users" class="btn btn-secondary shrink-0">Search</button>
                     </div>
                   </div>
                   <div class="scroll-thin max-w-full overflow-x-auto">
                     <p class="label">Role</p>
+                    <!-- Role filter. GET form filter-users: role, q. Counts on the buttons = COUNT of user_account rows per role (All = every user, 7). -->
                     <form id="filter-users" method="get" action="user-accounts.html"></form>
                     <div class="seg" role="group" aria-label="Role filter">
-                      <button type="submit" form="filter-users" name="role" value="all" aria-pressed="true" data-filter-group="users" data-filter-value="all">All (7)</button>
-                      <button type="submit" form="filter-users" name="role" value="admin" aria-pressed="false" data-filter-group="users" data-filter-value="admin">Admin (1)</button>
-                      <button type="submit" form="filter-users" name="role" value="cashier" aria-pressed="false" data-filter-group="users" data-filter-value="cashier">Cashier (2)</button>
-                      <button type="submit" form="filter-users" name="role" value="kitchen" aria-pressed="false" data-filter-group="users" data-filter-value="kitchen">Kitchen (2)</button>
-                      <button type="submit" form="filter-users" name="role" value="inventory" aria-pressed="false" data-filter-group="users" data-filter-value="inventory">Inventory (1)</button>
-                      <button type="submit" form="filter-users" name="role" value="procurement" aria-pressed="false" data-filter-group="users" data-filter-value="procurement">Procurement (1)</button>
+                      <button type="submit" form="filter-users" name="role" value="all" aria-pressed="true">All (7)</button>
+                      <button type="submit" form="filter-users" name="role" value="admin" aria-pressed="false">Admin (1)</button>
+                      <button type="submit" form="filter-users" name="role" value="cashier" aria-pressed="false">Cashier (2)</button>
+                      <button type="submit" form="filter-users" name="role" value="kitchen" aria-pressed="false">Kitchen (2)</button>
+                      <button type="submit" form="filter-users" name="role" value="inventory" aria-pressed="false">Inventory (1)</button>
+                      <button type="submit" form="filter-users" name="role" value="procurement" aria-pressed="false">Procurement (1)</button>
                     </div>
                   </div>
                 </div>
@@ -289,8 +304,8 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <!-- Backend: one row for each of the users (by name). Source: user_account. Rule: there is no derived value except the active/inactive badge, which is users.is_active (EXTRA). -->
-                      <tr data-id="USR-01" data-filter-in="users" data-filter-key="admin" data-search="carl john carljohn administrator / owner">
+                      <!-- Backend: one row for each of the users (by name). Source: user_account. Rule: there is no derived value except the active/inactive badge, which is users.is_active (EXTRA); Last login = user_account.last_login_at (EXTRA column). -->
+                      <tr data-id="USR-01">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -330,7 +345,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr data-id="USR-02" data-filter-in="users" data-filter-key="cashier" data-search="jun santos jsantos cashier / service staff">
+                      <tr data-id="USR-02">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -376,7 +391,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr data-id="USR-03" data-filter-in="users" data-filter-key="cashier" data-search="liza ramos lramos cashier / service staff">
+                      <tr data-id="USR-03">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -422,7 +437,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr data-id="USR-04" data-filter-in="users" data-filter-key="kitchen" data-search="mario dela cruz mdelacruz kitchen staff / cook">
+                      <tr data-id="USR-04">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -468,7 +483,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr data-id="USR-05" data-filter-in="users" data-filter-key="inventory" data-search="carla mendoza cmendoza inventory staff">
+                      <tr data-id="USR-05">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -514,7 +529,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr data-id="USR-06" data-filter-in="users" data-filter-key="procurement" data-search="paolo garcia pgarcia procurement officer">
+                      <tr data-id="USR-06">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -560,7 +575,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr data-id="USR-07" data-filter-in="users" data-filter-key="kitchen" data-search="tessa villanueva tvillanueva kitchen staff / cook">
+                      <tr data-id="USR-07">
                         <th scope="row">
                           <span class="flex items-center gap-3">
                             <span class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-tint sm:flex text-xs font-bold text-brand-dark" aria-hidden="true">
@@ -597,7 +612,7 @@
                             <button type="button" data-dialog-open="dlg-reset-password" data-fill-id="USR-07" data-fill-name="Tessa Villanueva" class="btn btn-secondary btn-sm !min-h-[44px] !min-w-[44px] !px-2" aria-label="Reset password for Tessa Villanueva" title="Reset password">
                               <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
                             </button>
-                            <form id="users-form-2" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-reactivated">
+                            <form id="users-form-2" method="post" action="/users/status">
                               <input type="hidden" name="user_id" value="USR-07">
                               <input type="hidden" name="is_active" value="1">
                               <button type="submit" class="btn btn-secondary btn-sm !min-h-[44px]" aria-label="Reactivate Tessa Villanueva">
@@ -613,7 +628,8 @@
                     </tbody>
                   </table>
                 </div>
-                <p data-empty-for="users" hidden class="mt-3 rounded-md border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-700">No user matches this search and role.</p>
+                <!-- Empty state: printed instead of the table when no user matches. -->
+                <p hidden class="mt-3 rounded-md border border-dashed border-slate-300 px-3 py-6 text-center text-sm text-slate-700">No user matches this search and role.</p>
                 <p class="hint-3">Deactivating keeps the person's history (orders, stock entries, purchase orders) but blocks the login. Delete only works for an account that never recorded anything; otherwise deactivate it.</p>
               </div>
             </section>
@@ -624,7 +640,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="add-user-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-added">
+              <form id="add-user-form" method="post" action="/users">
                 <div class="form-error" role="alert" id="add-user-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <div class="grid gap-4 sm:grid-cols-2">
@@ -679,7 +695,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-01-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-01-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-01-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-01">
@@ -731,7 +747,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-02-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-02-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-02-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-02">
@@ -783,7 +799,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-03-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-03-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-03-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-03">
@@ -835,7 +851,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-04-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-04-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-04-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-04">
@@ -887,7 +903,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-05-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-05-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-05-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-05">
@@ -939,7 +955,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-06-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-06-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-06-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-06">
@@ -991,7 +1007,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="edit-USR-07-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-saved">
+              <form id="edit-USR-07-form" method="post" action="/users/update">
                 <div class="form-error" role="alert" id="edit-USR-07-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-4">
                   <input type="hidden" name="user_id" value="USR-07">
@@ -1043,7 +1059,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="dlg-reset-password-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-password-reset">
+              <form id="dlg-reset-password-form" method="post" action="/users/reset-password">
                 <div class="form-error" role="alert" id="dlg-reset-password-form-error" tabindex="-1" hidden><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5 shrink-0" aria-hidden="true" focusable="false"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg><span>Some fields need your attention. Fix the fields marked below and save again.</span></div>
                 <div class="modal-body space-y-3">
                   <input type="hidden" name="user_id" value data-fill-input="id">
@@ -1078,7 +1094,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="dlg-deactivate-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-deactivated">
+              <form id="dlg-deactivate-form" method="post" action="/users/status">
                 <div class="modal-body space-y-3">
                   <input type="hidden" name="user_id" value data-fill-input="id">
                   <p class="text-sm text-slate-700"><strong data-fill="name">Jun Santos</strong> will no longer be able to log in. Their orders and history stay in the system, and you can reactivate the account later.</p>
@@ -1101,7 +1117,7 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <form id="dlg-delete-form" method="post" action="user-accounts.html" data-local-save data-toast-open="toast-user-deleted">
+              <form id="dlg-delete-form" method="post" action="/users/delete">
                 <div class="modal-body space-y-3">
                   <input type="hidden" name="user_id" value data-fill-input="id">
                   <p class="text-sm text-slate-700">This permanently deletes <strong data-fill="name">Jun Santos</strong> and cannot be undone.</p>
@@ -1123,74 +1139,9 @@
     </div>
   </div>
 
-  <!-- Toasts: hidden until a button or a form with data-toast-open="id" shows one (shell.js). -->
-  <div id="toast-root" class="no-print toast-stack" role="status" aria-live="polite">
-    <div id="toast-user-added" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">User added</p>
-        <p class="mt-0.5 text-sm text-slate-600">They can log in with the temporary password.</p>
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-user-saved" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">Changes saved</p>
-
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-password-reset" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">Password reset</p>
-        <p class="mt-0.5 text-sm text-slate-600">The old password no longer works.</p>
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-user-deactivated" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">User deactivated</p>
-        <p class="mt-0.5 text-sm text-slate-600">Their history stays in the system.</p>
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-user-reactivated" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">User reactivated</p>
-
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-    <div id="toast-user-deleted" class="toast toast-success pointer-events-auto hidden">
-      <svg width="20" height="20" viewBox="0 0 24 24" class="i shrink-0 mt-0.5 text-brand" aria-hidden="true" focusable="false"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-slate-900">User deleted</p>
-
-      </div>
-      <button type="button" data-toast-close class="btn btn-ghost btn-sm -my-1 !min-h-[32px] !px-2" aria-label="Dismiss notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" class="i shrink-0" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-      </button>
-    </div>
-  </div>
 
   <script src="assets/js/shell.js"></script>
-  <script src="assets/js/session.js"></script>
   <script src="assets/js/dialogs.js"></script>
   <script src="assets/js/forms.js"></script>
-  <script src="assets/js/filters.js"></script>
 </body>
 </html>
